@@ -7,6 +7,7 @@ export default {
   slotMinutes: 60,
   bookingWindowDays: 60,
   pendingHoldMinutes: 15,
+  minHoursAhead: 36, // no appointments may be booked less than 36 hours in advance
 
   // Regular hours: Monday-Thursday, first appt 10:00 AM, last appt 5:00 PM.
   // Close is set to 18:00 so the last 60-min slot starts at 17:00.
@@ -60,6 +61,7 @@ export default {
   },
 
   policies: [
+    "Appointments must be booked at least 36 hours in advance.",
     "A non-refundable deposit is required from ALL clients: $75, or the full amount if the service fee is less.",
     "$50.00 will be secured for all missed appointments and those cancelled or rescheduled less than 24 hours ahead of appointment time.",
     "The remainder may be paid in cash on the day of the appointment, or pre-paid in full.",

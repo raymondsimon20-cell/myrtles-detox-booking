@@ -8,6 +8,7 @@ export default async () =>
     timezone: config.timezone,
     slotMinutes: config.slotMinutes,
     bookingWindowDays: config.bookingWindowDays,
+    minHoursAhead: config.minHoursAhead,
     hours: config.hours,
     services: config.services,
     flexFee: config.flexFee,

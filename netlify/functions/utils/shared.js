@@ -44,12 +44,27 @@ export function slotsForDate(dateStr) {
   return out;
 }
 
+// Current wall-clock time in the business timezone, expressed as a UTC epoch
+// (so it can be compared against Date.UTC(slot date, slot time)).
+export function tzNowEpoch() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: config.timezone,
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  }).formatToParts(new Date());
+  const g = (t) => +parts.find((p) => p.type === t).value;
+  return Date.UTC(g("year"), g("month") - 1, g("day"), g("hour") % 24, g("minute"));
+}
+
 export function isValidSlot(date, time) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date || "") || !/^\d{2}:\d{2}$/.test(time || "")) return false;
   if (!slotsForDate(date).includes(time)) return false;
-  const { date: today, time: nowTime } = nowInTz();
-  if (date < today) return false;
-  if (date === today && time <= nowTime) return false;
+  const slotEpoch = Date.UTC(
+    +date.slice(0, 4), +date.slice(5, 7) - 1, +date.slice(8, 10),
+    +time.slice(0, 2), +time.slice(3, 5)
+  );
+  // Must be at least minHoursAhead in the future
+  if (slotEpoch < tzNowEpoch() + (config.minHoursAhead ?? 0) * 3600000) return false;
   const max = new Date(Date.now() + config.bookingWindowDays * 86400000)
     .toISOString()
     .slice(0, 10);

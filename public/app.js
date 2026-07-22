@@ -39,6 +39,26 @@
     return out;
   }
 
+  // Earliest bookable moment: now (business timezone) + minHoursAhead
+  function cutoffEpoch() {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: cfg.timezone, year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", hour12: false,
+    }).formatToParts(new Date());
+    const g = (t) => +parts.find((p) => p.type === t).value;
+    return Date.UTC(g("year"), g("month") - 1, g("day"), g("hour") % 24, g("minute")) +
+      (cfg.minHoursAhead ?? 0) * 3600000;
+  }
+  const slotEpoch = (d, t) =>
+    Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10), +t.slice(0, 2), +t.slice(3, 5));
+  const bookableSlots = (dateStr) => {
+    const cut = cutoffEpoch();
+    const takenList = state.taken[dateStr] || [];
+    return slotsForDate(dateStr).filter(
+      (t) => !takenList.includes(t) && slotEpoch(dateStr, t) >= cut
+    );
+  };
+
   const isSunday = (d) => d && new Date(d + "T12:00:00Z").getUTCDay() === 0;
   function amountDue() {
     const s = state.service;
@@ -149,11 +169,11 @@
     for (let d = 1; d <= days; d++) {
       const dateStr = `${y}-${pad(m + 1)}-${pad(d)}`;
       const slots = slotsForDate(dateStr);
-      const takenList = state.taken[dateStr] || [];
-      const open = slots.filter((t) => !takenList.includes(t));
+      const open = bookableSlots(dateStr);
       const inRange = dateStr >= todayStr && dateStr <= maxStr;
-      const disabled = !inRange || slots.length === 0;
-      const full = inRange && slots.length > 0 && open.length === 0;
+      const disabled = !inRange || slots.length === 0 || open.length === 0;
+      const full = inRange && slots.length > 0 && open.length === 0 &&
+        (state.taken[dateStr] || []).length > 0;
       html += `<button type="button" class="cal-day ${full ? "full" : ""} ${state.date === dateStr ? "selected" : ""}"
         data-date="${dateStr}" ${disabled || full ? "disabled" : ""}>${d}</button>`;
     }
@@ -180,12 +200,7 @@
   }
 
   function renderSlots() {
-    const takenList = state.taken[state.date] || [];
-    let slots = slotsForDate(state.date).filter((t) => !takenList.includes(t));
-    if (state.date === todayStr) {
-      const nowT = new Date().toLocaleTimeString("en-GB", { timeZone: cfg.timezone, hour: "2-digit", minute: "2-digit" });
-      slots = slots.filter((t) => t > nowT);
-    }
+    const slots = bookableSlots(state.date);
     $("slot-date-label").textContent = fmtDate(state.date);
     $("slots").innerHTML = slots.length
       ? slots.map((t) => `<button type="button" class="slot-btn" data-time="${t}">${fmt12(t)}</button>`).join("")
