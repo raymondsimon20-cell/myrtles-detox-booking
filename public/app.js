@@ -27,11 +27,15 @@
       weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "UTC",
     });
 
+  const stationOf = (s) =>
+    s.group ? s.group.toLowerCase().replace(/[^a-z0-9]+/g, "-") : s.id;
+
   function slotsForDate(dateStr) {
     const dow = new Date(dateStr + "T12:00:00Z").getUTCDay();
     const hrs = cfg.hours[String(dow)];
     if (!hrs) return [];
-    if (!Array.isArray(hrs)) return hrs.slots || [];
+    if (!Array.isArray(hrs)) return hrs.slots || []; // Sunday explicit slots
+    if (state.service && state.service.times) return state.service.times;
     const toMin = (t) => +t.slice(0, 2) * 60 + +t.slice(3, 5);
     const out = [];
     for (let m = toMin(hrs[0]); m + cfg.slotMinutes <= toMin(hrs[1]); m += cfg.slotMinutes)
@@ -52,10 +56,14 @@
   const slotEpoch = (d, t) =>
     Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10), +t.slice(0, 2), +t.slice(3, 5));
   const bookableSlots = (dateStr) => {
+    if (!state.service) return [];
     const cut = cutoffEpoch();
-    const takenList = state.taken[dateStr] || [];
+    const myStation = stationOf(state.service);
+    const takenTimes = (state.taken[dateStr] || [])
+      .filter((e) => e.station === myStation)
+      .map((e) => e.time);
     return slotsForDate(dateStr).filter(
-      (t) => !takenList.includes(t) && slotEpoch(dateStr, t) >= cut
+      (t) => !takenTimes.includes(t) && slotEpoch(dateStr, t) >= cut
     );
   };
 
@@ -98,6 +106,7 @@
           <span class="s-body">
             <span class="s-name">${s.name}</span>
             <span class="s-price">${s.price}</span><br/>
+            ${s.note ? `<span class="hint">${s.note}</span><br/>` : ""}
             <span class="s-dep">Deposit: $${s.deposit}</span>
           </span>
         </div>`;
@@ -172,8 +181,9 @@
       const open = bookableSlots(dateStr);
       const inRange = dateStr >= todayStr && dateStr <= maxStr;
       const disabled = !inRange || slots.length === 0 || open.length === 0;
+      const myStation = state.service ? stationOf(state.service) : null;
       const full = inRange && slots.length > 0 && open.length === 0 &&
-        (state.taken[dateStr] || []).length > 0;
+        (state.taken[dateStr] || []).some((e) => e.station === myStation);
       html += `<button type="button" class="cal-day ${full ? "full" : ""} ${state.date === dateStr ? "selected" : ""}"
         data-date="${dateStr}" ${disabled || full ? "disabled" : ""}>${d}</button>`;
     }
@@ -330,7 +340,7 @@
         },
         onApprove: async (data) => {
           try {
-            await api("/api/capture-payment", { orderId: data.orderID, date: state.date, time: state.time });
+            await api("/api/capture-payment", { orderId: data.orderID, date: state.date, time: state.time, serviceId: state.service.id });
             finish("Confirmed!", `
               <p>Your $${state.service.deposit} deposit was received — your appointment is
               <strong>confirmed</strong>.</p>

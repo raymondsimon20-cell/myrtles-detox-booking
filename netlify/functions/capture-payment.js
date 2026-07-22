@@ -1,6 +1,6 @@
 // POST /api/capture-payment
-// Body: { orderId, date, time } - captures the PayPal deposit and confirms the booking
-import { config, json, store, slotKey } from "./utils/shared.js";
+// Body: { orderId, date, time, serviceId } - captures the PayPal deposit and confirms the booking
+import { config, json, store, slotKey, stationOf } from "./utils/shared.js";
 import { captureOrder } from "./utils/paypal.js";
 import { sendEmail, ownerEmail, fmtWhen, bookingLine } from "./utils/email.js";
 
@@ -13,11 +13,13 @@ export default async (req) => {
   } catch {
     return json({ error: "Invalid JSON" }, 400);
   }
-  const { orderId, date, time } = body;
+  const { orderId, date, time, serviceId } = body;
   if (!orderId || !date || !time) return json({ error: "Missing fields" }, 400);
+  const service = config.services.find((sv) => sv.id === serviceId);
+  if (!service) return json({ error: "Unknown service" }, 400);
 
   const s = store();
-  const key = slotKey(date, time);
+  const key = slotKey(date, time, stationOf(service));
   const entry = await s.get(key, { type: "json" });
   if (!entry || entry.paypalOrderId !== orderId)
     return json({ error: "Booking not found for this payment" }, 404);

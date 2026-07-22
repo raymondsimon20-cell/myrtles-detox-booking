@@ -7,7 +7,17 @@ export { config };
 export const store = () =>
   getStore({ name: "myrtles-booking", consistency: "strong" });
 
-export const slotKey = (date, time) => `slot:${date}:${time}`;
+// Each service (or duration group) is its own "station" — different stations can
+// be booked at overlapping times; the same station can't be double-booked.
+export const stationOf = (service) =>
+  service.group
+    ? service.group.toLowerCase().replace(/[^a-z0-9]+/g, "-")
+    : service.id;
+
+export const slotKey = (date, time, station) => `slot:${date}:${time}:${station}`;
+
+export const parseSlotKey = (key) =>
+  key.match(/^slot:(\d{4}-\d{2}-\d{2}):(\d{2}:\d{2}):(.+)$/);
 
 export const json = (body, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -27,12 +37,15 @@ export function nowInTz() {
   return { date, time };
 }
 
-// All slot start times for a given YYYY-MM-DD, per business hours
-export function slotsForDate(dateStr) {
+// All slot start times for a service on a given YYYY-MM-DD.
+// Sundays use the explicit Sunday slots; weekdays use the service's own "times"
+// list if it has one, otherwise the hourly grid.
+export function slotsForService(service, dateStr) {
   const dow = new Date(dateStr + "T12:00:00Z").getUTCDay();
   const hours = config.hours[String(dow)];
   if (!hours) return [];
-  if (!Array.isArray(hours)) return hours.slots || [];
+  if (!Array.isArray(hours)) return hours.slots || []; // Sunday explicit slots
+  if (service && service.times) return service.times;
   const [open, close] = hours;
   const toMin = (t) => +t.slice(0, 2) * 60 + +t.slice(3, 5);
   const toStr = (m) =>
@@ -56,9 +69,9 @@ export function tzNowEpoch() {
   return Date.UTC(g("year"), g("month") - 1, g("day"), g("hour") % 24, g("minute"));
 }
 
-export function isValidSlot(date, time) {
+export function isValidSlot(service, date, time) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date || "") || !/^\d{2}:\d{2}$/.test(time || "")) return false;
-  if (!slotsForDate(date).includes(time)) return false;
+  if (!slotsForService(service, date).includes(time)) return false;
   const slotEpoch = Date.UTC(
     +date.slice(0, 4), +date.slice(5, 7) - 1, +date.slice(8, 10),
     +time.slice(0, 2), +time.slice(3, 5)

@@ -101,12 +101,25 @@
     refresh();
   }
 
-  // ---------- Day detail ----------
-  function slotsForDate(dateStr) {
+  // ---------- Day detail (grouped by service/station) ----------
+  const stationOf = (s) =>
+    s.group ? s.group.toLowerCase().replace(/[^a-z0-9]+/g, "-") : s.id;
+
+  function stationList() {
+    const seen = new Map();
+    for (const s of cfg.services) {
+      const st = stationOf(s);
+      if (!seen.has(st)) seen.set(st, { station: st, label: s.group || s.name, rep: s });
+    }
+    return [...seen.values()];
+  }
+
+  function slotsForStation(rep, dateStr) {
     const dow = new Date(dateStr + "T12:00:00Z").getUTCDay();
     const hrs = cfg.hours[String(dow)];
     if (!hrs) return [];
     if (!Array.isArray(hrs)) return hrs.slots || [];
+    if (rep.times) return rep.times;
     const toMin = (t) => +t.slice(0, 2) * 60 + +t.slice(3, 5);
     const out = [];
     for (let m = toMin(hrs[0]); m + cfg.slotMinutes <= toMin(hrs[1]); m += cfg.slotMinutes)
@@ -120,58 +133,66 @@
       weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "UTC",
     });
     const entries = state.slots.filter((s) => s.date === date);
-    const grid = slotsForDate(date);
-    const times = [...new Set([...grid, ...entries.map((e) => e.time)])].sort();
-
-    $("day-slots").innerHTML = times.length
-      ? times.map((t) => {
-          const e = entries.find((x) => x.time === t);
-          if (!e) {
-            return `<div class="slot-row"><span class="t">${fmt12(t)}</span>
-              <span class="who hint">open</span>
-              <button class="btn-small" data-act="block" data-time="${t}">Block</button></div>`;
-          }
-          if (e.type === "block") {
-            return `<div class="slot-row"><span class="t">${fmt12(t)}</span>
-              <span class="who"><span class="badge blocked">blocked</span></span>
-              <button class="btn-small" data-act="unblock" data-time="${t}">Unblock</button></div>`;
-          }
-          const contact = [e.phone, e.email].filter(Boolean).join(" · ");
-          const confirmBtn = e.status === "awaiting-deposit"
-            ? `<button class="btn-primary" data-act="confirm" data-time="${t}">Deposit received ✓</button>` : "";
+    let html = "";
+    for (const { station, label, rep } of stationList()) {
+      const stEntries = entries.filter((e) => e.station === station);
+      const times = [...new Set([...slotsForStation(rep, date), ...stEntries.map((e) => e.time)])].sort();
+      if (!times.length) continue;
+      const rows = times.map((t) => {
+        const e = stEntries.find((x) => x.time === t);
+        if (!e) {
           return `<div class="slot-row"><span class="t">${fmt12(t)}</span>
-            <span class="who"><span class="badge ${e.status}">${e.status}</span>
-              <strong>${e.name || "?"}</strong> — ${e.serviceName || ""}${e.deposit ? ` ($${e.deposit} deposit)` : ""}
-              <br/><span class="hint">${contact}${e.notes ? " · " + e.notes : ""}</span></span>
-            ${confirmBtn}
-            <button class="btn-danger" data-act="cancel" data-time="${t}">Cancel</button></div>`;
-        }).join("")
-      : "<p class='hint'>Outside regular hours — use the form below to add flex-hour bookings, or block times.</p>";
-
+            <span class="who hint">open</span>
+            <button class="btn-small" data-act="block" data-time="${t}" data-station="${station}">Block</button></div>`;
+        }
+        if (e.type === "block") {
+          return `<div class="slot-row"><span class="t">${fmt12(t)}</span>
+            <span class="who"><span class="badge blocked">blocked</span></span>
+            <button class="btn-small" data-act="unblock" data-time="${t}" data-station="${station}">Unblock</button></div>`;
+        }
+        const contact = [e.phone, e.email].filter(Boolean).join(" · ");
+        const confirmBtn = e.status === "awaiting-deposit"
+          ? `<button class="btn-primary" data-act="confirm" data-time="${t}" data-station="${station}">Deposit received ✓</button>` : "";
+        return `<div class="slot-row"><span class="t">${fmt12(t)}</span>
+          <span class="who"><span class="badge ${e.status}">${e.status}</span>
+            <strong>${e.name || "?"}</strong> — ${e.serviceName || ""}${e.deposit ? ` ($${e.deposit})` : ""}
+            <br/><span class="hint">${contact}${e.notes ? " · " + e.notes : ""}</span></span>
+          ${confirmBtn}
+          <button class="btn-danger" data-act="cancel" data-time="${t}" data-station="${station}">Cancel</button></div>`;
+      }).join("");
+      html += `<h4 style="margin:0.9rem 0 0.2rem">${label}</h4>${rows}`;
+    }
+    // manual/off-schedule entries not covered above
+    const misc = entries.filter((e) => !stationList().some((s) => s.station === e.station));
+    if (misc.length) {
+      html += `<h4 style="margin:0.9rem 0 0.2rem">Other</h4>` + misc.map((e) =>
+        `<div class="slot-row"><span class="t">${fmt12(e.time)}</span>
+          <span class="who"><span class="badge ${e.status}">${e.status}</span>
+            <strong>${e.name || "?"}</strong> — ${e.serviceName || ""}</span>
+          <button class="btn-danger" data-act="cancel" data-time="${e.time}" data-station="${e.station}">Cancel</button></div>`
+      ).join("");
+    }
+    $("day-slots").innerHTML = html ||
+      "<p class='hint'>Closed this day — use the form below to add flex-hour bookings.</p>";
     $("day-detail").classList.remove("hidden");
   }
 
   $("day-slots").addEventListener("click", async (e) => {
     const btn = e.target.closest("button[data-act]");
     if (!btn) return;
-    const { act, time } = btn.dataset;
-    if (act === "cancel" && !confirm(`Cancel the ${fmt12(time)} booking? This frees the slot.`)) return;
+    const { act, time, station } = btn.dataset;
+    if (act === "cancel" && !confirm(`Cancel the ${fmt12(time)} entry? This frees the slot.`)) return;
     try {
       showError("admin-error", null);
-      await api({
-        action: act === "block" ? "block" : act,
-        date: state.selDate,
-        time,
-        ...(act === "block" ? { times: [time] } : {}),
-      });
+      await api({ action: act, date: state.selDate, time, station });
       await refresh();
     } catch (err) { showError("admin-error", err.message); }
   });
 
   $("block-day-btn").onclick = async () => {
-    if (!confirm("Block every open slot on this day?")) return;
+    if (!confirm("Block every open slot for every service on this day?")) return;
     try {
-      await api({ action: "block", date: state.selDate });
+      await api({ action: "block-day", date: state.selDate });
       await refresh();
     } catch (err) { showError("admin-error", err.message); }
   };

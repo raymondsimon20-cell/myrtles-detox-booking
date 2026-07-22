@@ -36,17 +36,19 @@ export default {
   // price: display label. deposit: amount due to reserve (min($75, price)).
   // Services sharing a "group" render as ONE card with a duration dropdown.
   // "img" points at the shared photo in public/img/ (defaults to the id).
+  // "times": specific weekday start times for that service (otherwise the hourly grid is used).
+  // Each service/group has its own station, so different services CAN be booked at overlapping times.
   services: [
     { id: "body-analysis", name: "Vital Health Body Analysis", price: "$50", deposit: 50 },
     { id: "consultation", name: "Consultation (post Body Analysis)", price: "$100", deposit: 75 },
-    { id: "colonic", name: "Colonic", price: "$110", deposit: 75 },
+    { id: "colonic", name: "Colonic", price: "$110", deposit: 75, times: ["10:00", "11:30", "13:30", "15:30", "17:00"], note: "2-hour appointment · 5:30 PM start by request (flex)" },
     { id: "colonic-abd", name: "Colonic & Abdominal Manipulation Tx", price: "$175", deposit: 75 },
-    { id: "foot-detox", name: "Foot Detox", price: "$70", deposit: 70 },
+    { id: "foot-detox", name: "Foot Detox", price: "$70", deposit: 70, times: ["11:00", "12:30", "14:30", "16:00", "16:30"] },
     { id: "hydromassage-10", name: "HydroMassage — 10 min", label: "10 min", price: "$40", deposit: 40, group: "HydroMassage", img: "hydromassage" },
     { id: "hydromassage-15", name: "HydroMassage — 15 min", label: "15 min", price: "$60", deposit: 60, group: "HydroMassage", img: "hydromassage" },
     { id: "hydromassage-20", name: "HydroMassage — 20 min", label: "20 min", price: "$70", deposit: 70, group: "HydroMassage", img: "hydromassage" },
     { id: "hydromassage-30", name: "HydroMassage — 30 min", label: "30 min", price: "$90", deposit: 75, group: "HydroMassage", img: "hydromassage" },
-    { id: "body-wrap", name: "Alkalyzing Body Wrap", price: "$125", deposit: 75 },
+    { id: "body-wrap", name: "Alkalyzing Body Wrap", price: "$125", deposit: 75, times: ["11:00", "15:00"] },
     { id: "sauna-15", name: "Sauna — 15 min", label: "15 min", price: "$50", deposit: 50, group: "Sauna", img: "sauna" },
     { id: "sauna-20", name: "Sauna — 20 min", label: "20 min", price: "$55", deposit: 55, group: "Sauna", img: "sauna" },
     { id: "sauna-25", name: "Sauna — 25 min", label: "25 min", price: "$60", deposit: 60, group: "Sauna", img: "sauna" },
@@ -67,8 +69,8 @@ export default {
     "The remainder may be paid in cash on the day of the appointment, or pre-paid in full.",
     "Appointments are scheduled and confirmed as deposits are received.",
     "Flex hours (days/times outside regular hours) are available for $25 per person per request - contact us to arrange.",
-    "CLOSED on Saturdays - no appointments.",
-    "Some Sundays are available for a spa appointment. ALL Sundays must be PREPAID in full (includes the $25 flex fee) prior to scheduling: Colonic - $135 | Foot Detox - $95 | Colonic + Foot Detox - $205.",
+    "CLOSED on Fridays and Saturdays - no appointments.",
+    "Sundays: two slots available (1:30 PM & 3:00 PM), $25 flex fee applied. Any service may be booked but must be PREPAID in full prior to scheduling: Colonic - $135 | Foot Detox - $95 | Colonic + Foot Detox - $205 | all other services - price + $25.",
     "If the payment options aren't available to you, someone else may make the deposit for you - have them indicate who the funds are for.",
   ],
 };

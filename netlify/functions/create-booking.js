@@ -10,6 +10,7 @@ import {
   isValidSlot,
   isActive,
   amountDueFor,
+  stationOf,
 } from "./utils/shared.js";
 import { paymentsEnabled, createOrder } from "./utils/paypal.js";
 import { sendEmail, ownerEmail, fmtWhen, bookingLine, paymentInstructions } from "./utils/email.js";
@@ -32,11 +33,12 @@ export default async (req) => {
     return json({ error: "Please enter your name" }, 400);
   if (!phone && !email)
     return json({ error: "Please enter a phone number or email" }, 400);
-  if (!isValidSlot(date, time))
+  if (!isValidSlot(service, date, time))
     return json({ error: "That time slot is not available for booking" }, 400);
 
   const s = store();
-  const key = slotKey(date, time);
+  const station = stationOf(service);
+  const key = slotKey(date, time, station);
 
   // Slot must be free (or hold expired)
   const existing = await s.get(key, { type: "json" });
@@ -49,6 +51,7 @@ export default async (req) => {
     id: bookingId,
     type: "booking",
     serviceId,
+    station,
     serviceName: service.name,
     deposit: amountDue,
     sundayPrepay: sunday || undefined,

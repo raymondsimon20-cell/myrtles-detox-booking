@@ -1,14 +1,27 @@
 // POST /api/admin — owner actions. Requires header: x-admin-password
 // Actions:
 //   { action: "login" }
-//   { action: "list", month: "YYYY-MM" }            -> all bookings & blocks (incl. awaiting-deposit)
-//   { action: "block", date, times: ["10:00", ...] } -> block slots (whole day if times omitted)
-//   { action: "unblock", date, time }
-//   { action: "confirm", date, time }                -> mark awaiting-deposit booking confirmed
-//   { action: "cancel", date, time }                 -> cancel a booking (frees the slot)
-//   { action: "manual-book", date, time, name, serviceId?, phone?, notes? } -> owner-created booking (any day/time, e.g. flex hours or Sundays)
-import { config, json, store, slotKey, isActive } from "./utils/shared.js";
+//   { action: "list", month: "YYYY-MM" }                       -> all bookings & blocks
+//   { action: "block", date, time, station }                   -> block one service slot
+//   { action: "block-day", date }                              -> block every station's slots that day
+//   { action: "unblock", date, time, station }
+//   { action: "confirm", date, time, station }                 -> mark awaiting-deposit booking confirmed
+//   { action: "cancel", date, time, station }                  -> cancel booking/blocked slot (frees it)
+//   { action: "manual-book", date, time, serviceId, name, phone?, notes? } -> owner-created booking (any day/time)
+import {
+  config, json, store, slotKey, parseSlotKey, isActive, stationOf, slotsForService,
+} from "./utils/shared.js";
 import { sendEmail, fmtWhen } from "./utils/email.js";
+
+// One representative service per station (for schedules/labels)
+function stations() {
+  const map = new Map();
+  for (const s of config.services) {
+    const st = stationOf(s);
+    if (!map.has(st)) map.set(st, s);
+  }
+  return map; // station -> representative service
+}
 
 export default async (req) => {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
@@ -27,7 +40,7 @@ export default async (req) => {
   }
 
   const s = store();
-  const { action, date, time } = body;
+  const { action, date, time, station } = body;
   const validDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d || "");
   const validTime = (t) => /^\d{2}:\d{2}$/.test(t || "");
 
@@ -42,51 +55,54 @@ export default async (req) => {
       const slots = [];
       for (const b of blobs) {
         const entry = await s.get(b.key, { type: "json" });
-        if (!entry) continue;
-        if (!isActive(entry)) continue; // skip expired holds & cancelled
-        const m = b.key.match(/^slot:(\d{4}-\d{2}-\d{2}):(\d{2}:\d{2})$/);
+        if (!entry || !isActive(entry)) continue;
+        const m = parseSlotKey(b.key);
         if (!m) continue;
-        slots.push({ date: m[1], time: m[2], ...entry });
+        slots.push({ date: m[1], time: m[2], station: m[3], ...entry });
       }
       slots.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
       return json({ slots });
     }
 
     case "block": {
+      if (!validDate(date) || !validTime(time) || !station)
+        return json({ error: "Bad date/time/station" }, 400);
+      const key = slotKey(date, time, station);
+      const existing = await s.get(key, { type: "json" });
+      if (isActive(existing) && existing.type === "booking")
+        return json({ error: "There's a booking in that slot" }, 409);
+      await s.setJSON(key, { type: "block", status: "blocked", createdAt: new Date().toISOString() });
+      return json({ ok: true });
+    }
+
+    case "block-day": {
       if (!validDate(date)) return json({ error: "Bad date" }, 400);
-      let times = body.times;
-      if (!Array.isArray(times) || times.length === 0) {
-        // Whole day: block standard grid 08:00-19:00 hourly so nothing can slip through
-        times = [];
-        for (let h = 8; h <= 19; h++) times.push(String(h).padStart(2, "0") + ":00");
-      }
       const blocked = [];
-      for (const t of times) {
-        if (!validTime(t)) continue;
-        const key = slotKey(date, t);
-        const existing = await s.get(key, { type: "json" });
-        if (isActive(existing) && existing.type === "booking") continue; // don't overwrite bookings
-        await s.setJSON(key, {
-          type: "block",
-          status: "blocked",
-          createdAt: new Date().toISOString(),
-        });
-        blocked.push(t);
+      for (const [st, rep] of stations()) {
+        for (const t of slotsForService(rep, date)) {
+          const key = slotKey(date, t, st);
+          const existing = await s.get(key, { type: "json" });
+          if (isActive(existing)) continue; // don't overwrite bookings/blocks
+          await s.setJSON(key, { type: "block", status: "blocked", createdAt: new Date().toISOString() });
+          blocked.push(`${st} ${t}`);
+        }
       }
-      return json({ ok: true, blocked });
+      return json({ ok: true, blockedCount: blocked.length });
     }
 
     case "unblock": {
-      if (!validDate(date) || !validTime(time)) return json({ error: "Bad date/time" }, 400);
-      const key = slotKey(date, time);
+      if (!validDate(date) || !validTime(time) || !station)
+        return json({ error: "Bad date/time/station" }, 400);
+      const key = slotKey(date, time, station);
       const entry = await s.get(key, { type: "json" });
       if (entry && entry.type === "block") await s.delete(key);
       return json({ ok: true });
     }
 
     case "confirm": {
-      if (!validDate(date) || !validTime(time)) return json({ error: "Bad date/time" }, 400);
-      const key = slotKey(date, time);
+      if (!validDate(date) || !validTime(time) || !station)
+        return json({ error: "Bad date/time/station" }, 400);
+      const key = slotKey(date, time, station);
       const entry = await s.get(key, { type: "json" });
       if (!entry || entry.type !== "booking") return json({ error: "No booking there" }, 404);
       await s.setJSON(key, {
@@ -100,50 +116,53 @@ export default async (req) => {
         `Confirmed! Your ${config.businessName} appointment`,
         `Hi ${entry.name},
 
-We received your deposit — your appointment is CONFIRMED:
+We received your ${entry.sundayPrepay ? "prepayment" : "deposit"} — your appointment is CONFIRMED:
 
 ${entry.serviceName} — ${fmtWhen(date, time)}
 
-The remainder can be paid in cash on the day of your appointment.
-
-See you soon!
+${entry.sundayPrepay ? "" : "The remainder can be paid in cash on the day of your appointment.\n\n"}See you soon!
 ${config.businessName}`
       );
       return json({ ok: true });
     }
 
     case "cancel": {
-      if (!validDate(date) || !validTime(time)) return json({ error: "Bad date/time" }, 400);
-      const key = slotKey(date, time);
+      if (!validDate(date) || !validTime(time) || !station)
+        return json({ error: "Bad date/time/station" }, 400);
+      const key = slotKey(date, time, station);
       const entry = await s.get(key, { type: "json" });
-      if (!entry || entry.type !== "booking") return json({ error: "No booking there" }, 404);
+      if (!entry) return json({ error: "Nothing in that slot" }, 404);
       await s.delete(key);
-      await sendEmail(
-        entry.email,
-        `Your ${config.businessName} appointment was cancelled`,
-        `Hi ${entry.name},
+      if (entry.type === "booking") {
+        await sendEmail(
+          entry.email,
+          `Your ${config.businessName} appointment was cancelled`,
+          `Hi ${entry.name},
 
 Your appointment (${entry.serviceName} — ${fmtWhen(date, time)}) has been cancelled.
 
 If you have questions or want to rebook, reach us on Facebook or book again online.
 
 ${config.businessName}`
-      );
+        );
+      }
       return json({ ok: true, cancelled: entry });
     }
 
     case "manual-book": {
       if (!validDate(date) || !validTime(time)) return json({ error: "Bad date/time" }, 400);
-      const key = slotKey(date, time);
+      const service = config.services.find((sv) => sv.id === body.serviceId);
+      const st = service ? stationOf(service) : "manual";
+      const key = slotKey(date, time, st);
       const existing = await s.get(key, { type: "json" });
       if (isActive(existing)) return json({ error: "Slot already taken/blocked" }, 409);
-      const service = config.services.find((sv) => sv.id === body.serviceId);
       await s.setJSON(key, {
         id: crypto.randomUUID(),
         type: "booking",
         status: "confirmed",
         manual: true,
         serviceId: body.serviceId || null,
+        station: st,
         serviceName: service ? service.name : body.serviceName || "Owner-added",
         name: String(body.name || "").trim().slice(0, 100),
         phone: String(body.phone || "").trim().slice(0, 40),
