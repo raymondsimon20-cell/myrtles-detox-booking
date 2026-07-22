@@ -41,7 +41,19 @@ Customers pick a service, choose an open time on the calendar, and reserve it wi
    - `ADMIN_PASSWORD` = a strong password for the owner's admin page (required)
 4. Done — the site is live at `https://YOUR-SITE.netlify.app`. The admin page is at `/admin.html`.
 
-### 3. (Optional, later) Enable online PayPal/Venmo deposits
+### 3. (Optional) Enable email notifications (Gmail)
+
+Customers get "slot held" (with payment instructions), "confirmed", and "cancelled" emails; the owner gets an email for every new booking.
+
+1. On the owner's Google account, turn on 2-Step Verification (https://myaccount.google.com/security).
+2. Go to https://myaccount.google.com/apppasswords → create an app password named "Booking site" → copy the 16-character password.
+3. In Netlify → Site configuration → Environment variables, add:
+   - `GMAIL_USER` = the Gmail address (e.g. myrtle.rogers724@gmail.com)
+   - `GMAIL_APP_PASSWORD` = the 16-character app password
+   - `OWNER_EMAIL` = (optional) where new-booking alerts go, if different from GMAIL_USER
+4. Trigger a redeploy. Without these vars the site works normally, just without emails.
+
+### 4. (Optional, later) Enable online PayPal/Venmo deposits
 1. The owner creates a free **PayPal Business** account at https://www.paypal.com/business (can use the existing MyrtleRogers296 account).
 2. Go to https://developer.paypal.com → **Apps & Credentials** → **Live** → Create App → copy the **Client ID** and **Secret**.
 3. In Netlify environment variables add:

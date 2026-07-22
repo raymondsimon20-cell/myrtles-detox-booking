@@ -1,7 +1,8 @@
 // POST /api/capture-payment
 // Body: { orderId, date, time } - captures the PayPal deposit and confirms the booking
-import { json, store, slotKey } from "./utils/shared.js";
+import { config, json, store, slotKey } from "./utils/shared.js";
 import { captureOrder } from "./utils/paypal.js";
+import { sendEmail, ownerEmail, fmtWhen, bookingLine } from "./utils/email.js";
 
 export default async (req) => {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
@@ -36,6 +37,28 @@ export default async (req) => {
     paypalCaptureId: captureId,
     expiresAt: undefined,
   });
+
+  await sendEmail(
+    entry.email,
+    `Confirmed! Your ${config.businessName} appointment`,
+    `Hi ${entry.name},
+
+Your $${entry.deposit} deposit was received via PayPal and your appointment is CONFIRMED:
+
+${entry.serviceName} — ${fmtWhen(entry.date, entry.time)}
+
+The remainder can be paid in cash on the day of your appointment.
+
+See you soon!
+${config.businessName}`
+  );
+  await sendEmail(
+    ownerEmail(),
+    `Deposit PAID via PayPal: ${entry.name} — ${fmtWhen(entry.date, entry.time)}`,
+    `This booking paid its $${entry.deposit} deposit online and is confirmed:
+
+${bookingLine(entry)}`
+  );
 
   return json({ ok: true, bookingId: entry.id });
 };

@@ -11,6 +11,7 @@ import {
   isActive,
 } from "./utils/shared.js";
 import { paymentsEnabled, createOrder } from "./utils/paypal.js";
+import { sendEmail, ownerEmail, fmtWhen, bookingLine, paymentInstructions } from "./utils/email.js";
 
 export default async (req) => {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
@@ -75,6 +76,32 @@ export default async (req) => {
 
   // Zelle / CashApp / cash: hold the slot, owner confirms when deposit arrives
   await s.setJSON(key, { ...base, status: "awaiting-deposit" });
+
+  await sendEmail(
+    base.email,
+    `Your ${config.businessName} appointment is held — deposit needed to confirm`,
+    `Hi ${base.name},
+
+Your appointment is HELD:
+
+${service.name} — ${fmtWhen(date, time)}
+
+${paymentInstructions(service.deposit)}
+
+See you soon!
+${config.businessName}`
+  );
+  await sendEmail(
+    ownerEmail(),
+    `New booking (awaiting $${service.deposit} deposit): ${base.name} — ${fmtWhen(date, time)}`,
+    `A new appointment was booked and is awaiting its deposit:
+
+${bookingLine(base)}
+Deposit due: $${service.deposit}
+
+When the deposit arrives, open the admin page and click "Deposit received" to confirm it.`
+  );
+
   return json({
     bookingId,
     status: "awaiting-deposit",

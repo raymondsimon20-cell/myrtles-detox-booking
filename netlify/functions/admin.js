@@ -8,6 +8,7 @@
 //   { action: "cancel", date, time }                 -> cancel a booking (frees the slot)
 //   { action: "manual-book", date, time, name, serviceId?, phone?, notes? } -> owner-created booking (any day/time, e.g. flex hours or Sundays)
 import { config, json, store, slotKey, isActive } from "./utils/shared.js";
+import { sendEmail, fmtWhen } from "./utils/email.js";
 
 export default async (req) => {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
@@ -94,6 +95,20 @@ export default async (req) => {
         confirmedAt: new Date().toISOString(),
         expiresAt: undefined,
       });
+      await sendEmail(
+        entry.email,
+        `Confirmed! Your ${config.businessName} appointment`,
+        `Hi ${entry.name},
+
+We received your deposit — your appointment is CONFIRMED:
+
+${entry.serviceName} — ${fmtWhen(date, time)}
+
+The remainder can be paid in cash on the day of your appointment.
+
+See you soon!
+${config.businessName}`
+      );
       return json({ ok: true });
     }
 
@@ -103,6 +118,17 @@ export default async (req) => {
       const entry = await s.get(key, { type: "json" });
       if (!entry || entry.type !== "booking") return json({ error: "No booking there" }, 404);
       await s.delete(key);
+      await sendEmail(
+        entry.email,
+        `Your ${config.businessName} appointment was cancelled`,
+        `Hi ${entry.name},
+
+Your appointment (${entry.serviceName} — ${fmtWhen(date, time)}) has been cancelled.
+
+If you have questions or want to rebook, reach us on Facebook or book again online.
+
+${config.businessName}`
+      );
       return json({ ok: true, cancelled: entry });
     }
 
