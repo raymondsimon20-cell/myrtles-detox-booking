@@ -308,7 +308,9 @@
             <li><strong>Cash App:</strong> <code>${pm.cashApp}</code>
               <button type="button" class="copy-btn" data-copy="${pm.cashApp}">Copy</button></li>
             <li><strong>PayPal:</strong> <code>${pm.payPalHandle}</code>
-              <button type="button" class="copy-btn" data-copy="${pm.payPalHandle}">Copy</button></li>
+              <button type="button" class="copy-btn" data-copy="${pm.payPalHandle}">Copy</button>
+              <a class="copy-btn paylink" target="_blank" rel="noopener"
+                 href="https://paypal.me/${pm.payPalHandle}/${r.depositDue}">Pay $${r.depositDue} in PayPal →</a></li>
             <li><strong>Cash:</strong> prepay in person</li>
           </ul>
           <p>Please include your name (<strong>${details().name}</strong>) with the payment.
