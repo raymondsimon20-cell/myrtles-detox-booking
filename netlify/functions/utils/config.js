@@ -22,15 +22,23 @@ export default {
   },
 
   // price: display label. deposit: amount due to reserve (min($75, price)).
+  // Services sharing a "group" render as ONE card with a duration dropdown.
+  // "img" points at the shared photo in public/img/ (defaults to the id).
   services: [
     { id: "body-analysis", name: "Vital Health Body Analysis", price: "$50", deposit: 50 },
     { id: "consultation", name: "Consultation (post Body Analysis)", price: "$100", deposit: 75 },
     { id: "colonic", name: "Colonic", price: "$110", deposit: 75 },
     { id: "colonic-abd", name: "Colonic & Abdominal Manipulation Tx", price: "$175", deposit: 75 },
     { id: "foot-detox", name: "Foot Detox", price: "$70", deposit: 70 },
-    { id: "hydromassage", name: "HydroMassage (10-30 min)", price: "$40-$90", deposit: 40 },
-    { id: "body-wrap", name: "Body Wrap", price: "$125", deposit: 75 },
-    { id: "sauna", name: "Sauna (20 min)", price: "$50", deposit: 50 },
+    { id: "hydromassage-10", name: "HydroMassage — 10 min", label: "10 min", price: "$40", deposit: 40, group: "HydroMassage", img: "hydromassage" },
+    { id: "hydromassage-15", name: "HydroMassage — 15 min", label: "15 min", price: "$60", deposit: 60, group: "HydroMassage", img: "hydromassage" },
+    { id: "hydromassage-20", name: "HydroMassage — 20 min", label: "20 min", price: "$70", deposit: 70, group: "HydroMassage", img: "hydromassage" },
+    { id: "hydromassage-30", name: "HydroMassage — 30 min", label: "30 min", price: "$90", deposit: 75, group: "HydroMassage", img: "hydromassage" },
+    { id: "body-wrap", name: "Alkalyzing Body Wrap", price: "$125", deposit: 75 },
+    { id: "sauna-15", name: "Sauna — 15 min", label: "15 min", price: "$50", deposit: 50, group: "Sauna", img: "sauna" },
+    { id: "sauna-20", name: "Sauna — 20 min", label: "20 min", price: "$55", deposit: 55, group: "Sauna", img: "sauna" },
+    { id: "sauna-25", name: "Sauna — 25 min", label: "25 min", price: "$60", deposit: 60, group: "Sauna", img: "sauna" },
+    { id: "sauna-30", name: "Sauna — 30 min", label: "30 min", price: "$65", deposit: 65, group: "Sauna", img: "sauna" },
     { id: "body-part-manip", name: "Body Part Manipulation Therapy (Cranial / Spinal / Abdominal)", price: "$75-$150", deposit: 75 },
   ],
 

@@ -42,29 +42,76 @@
   $("policy-list").innerHTML = cfg.policies.map((p) => `<li>${p}</li>`).join("");
 
   // ---------- Step 1: services ----------
-  $("service-list").innerHTML = cfg.services
-    .map(
-      (s) => `<button type="button" class="service-card" data-id="${s.id}">
-        <img src="img/${s.id}.jpg" alt="${s.name}" loading="lazy"
+  // Group duration-variant services (same "group") into one card with a dropdown
+  const cards = [];
+  for (const s of cfg.services) {
+    if (s.group) {
+      let g = cards.find((c) => c.group === s.group);
+      if (!g) {
+        g = { group: s.group, img: s.img || s.id, variants: [] };
+        cards.push(g);
+      }
+      g.variants.push(s);
+    } else {
+      cards.push({ single: s });
+    }
+  }
+
+  $("service-list").innerHTML = cards
+    .map((c) => {
+      if (c.single) {
+        const s = c.single;
+        return `<div class="service-card" role="button" tabindex="0" data-id="${s.id}">
+          <img src="img/${s.img || s.id}.jpg" alt="${s.name}" loading="lazy"
+               onerror="this.style.display='none'" />
+          <span class="s-body">
+            <span class="s-name">${s.name}</span>
+            <span class="s-price">${s.price}</span><br/>
+            <span class="s-dep">Deposit: $${s.deposit}</span>
+          </span>
+        </div>`;
+      }
+      const opts = c.variants
+        .map((v, i) => `<option value="${v.id}" ${i === 0 ? "selected" : ""}>${v.label} — ${v.price}</option>`)
+        .join("");
+      return `<div class="service-card" role="button" tabindex="0" data-group="${c.group}" data-id="${c.variants[0].id}">
+        <img src="img/${c.img}.jpg" alt="${c.group}" loading="lazy"
              onerror="this.style.display='none'" />
         <span class="s-body">
-          <span class="s-name">${s.name}</span>
-          <span class="s-price">${s.price}</span><br/>
-          <span class="s-dep">Deposit: $${s.deposit}</span>
+          <span class="s-name">${c.group}</span>
+          <select class="s-duration" aria-label="${c.group} duration">${opts}</select><br/>
+          <span class="s-dep">Deposit: $${c.variants[0].deposit}</span>
         </span>
-      </button>`
-    )
+      </div>`;
+    })
     .join("");
+
+  function selectCard(card) {
+    document.querySelectorAll(".service-card").forEach((c) => c.classList.remove("selected"));
+    card.classList.add("selected");
+    const sel = card.querySelector(".s-duration");
+    const id = sel ? sel.value : card.dataset.id;
+    state.service = cfg.services.find((s) => s.id === id);
+    card.querySelector(".s-dep").textContent = `Deposit: $${state.service.deposit}`;
+    $("step-datetime").classList.remove("hidden");
+    renderCalendar();
+    updatePayStep();
+  }
+
   $("service-list").addEventListener("click", (e) => {
     const card = e.target.closest(".service-card");
     if (!card) return;
-    document.querySelectorAll(".service-card").forEach((c) => c.classList.remove("selected"));
-    card.classList.add("selected");
-    state.service = cfg.services.find((s) => s.id === card.dataset.id);
-    $("step-datetime").classList.remove("hidden");
-    card.scrollIntoView({ behavior: "smooth", block: "center" });
-    renderCalendar();
-    updatePayStep();
+    selectCard(card);
+    if (!e.target.closest("select")) card.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+  $("service-list").addEventListener("change", (e) => {
+    const card = e.target.closest(".service-card");
+    if (card && e.target.classList.contains("s-duration")) selectCard(card);
+  });
+  $("service-list").addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const card = e.target.closest(".service-card");
+    if (card && !e.target.closest("select")) { e.preventDefault(); selectCard(card); }
   });
 
   // ---------- Step 2: calendar ----------
