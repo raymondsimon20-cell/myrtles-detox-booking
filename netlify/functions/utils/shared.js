@@ -3,7 +3,9 @@ import config from "./config.js";
 
 export { config };
 
-export const store = () => getStore("myrtles-booking");
+// "strong" consistency so a new booking is visible instantly (prevents double-booking)
+export const store = () =>
+  getStore({ name: "myrtles-booking", consistency: "strong" });
 
 export const slotKey = (date, time) => `slot:${date}:${time}`;
 
