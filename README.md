@@ -83,6 +83,22 @@ Edit `netlify/functions/utils/config.js` (services, deposits, hours, policies, p
 - The $50 missed-appointment fee is policy text only; since deposits are non-refundable and at least $50 for every service, it's covered by keeping the deposit.
 - Slot length is 60 minutes (`slotMinutes` in config).
 
+## Photo credits
+
+Logo from the spa's YouTube channel. Service photos are free-licensed (Creative Commons via Openverse):
+
+- body-analysis.jpg: "Person Using Black Blood Pressure Monitor" by Homedust (CC BY) — flickr.com/photos/159630537@N08/41871793415
+- consultation.jpg: "Nutritionist displaying fresh fruits..." by nenadstojkovicart (CC BY) — flickr.com/photos/202846129@N03/54538370547
+- colonic.jpg: "a restful, well-lighted space" by woodleywonderworks (CC BY) — flickr.com/photos/73645804@N00/2638509964
+- colonic-abd.jpg: "Total care and relaxation" by Scubaspa Maldives (CC BY) — flickr.com/photos/145748390@N03/30273731091
+- foot-detox.jpg: "Close two female feet white" (CC0) — rawpixel.com/image/5971657
+- hydromassage.jpg: "Ferienvilla Cape Coral Masterbad" by VillaEarlySunset (CC BY) — flickr.com/photos/64021749@N04/6266102768
+- body-wrap.jpg: "Spa treatment room portrait" by bloggeratlarge (CC0) — flickr.com/photos/184934270@N04/52262895342
+- sauna.jpg: "Sauna at Hotel Arthur" by Hotel Arthur Helsinki (CC BY) — flickr.com/photos/88467564@N06/9314082768
+- body-part-manip.jpg: "massage" by Collin Parker (CC BY) — flickr.com/photos/158282012@N07/43781411011
+
+To swap any photo: replace the file in `public/img/` (640×480 works best), keep the same filename.
+
 ## Local development
 
 ```

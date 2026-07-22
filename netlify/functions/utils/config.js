@@ -2,7 +2,7 @@
 // Deposit rule: $75 non-refundable deposit, or the full service price if it is less than $75.
 
 export default {
-  businessName: "Myrtle's Detox Spa",
+  businessName: "Myrtle's Detox & Wellness Spa",
   timezone: "America/New_York",
   slotMinutes: 60,
   bookingWindowDays: 60,

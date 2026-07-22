@@ -45,9 +45,13 @@
   $("service-list").innerHTML = cfg.services
     .map(
       (s) => `<button type="button" class="service-card" data-id="${s.id}">
-        <span class="s-name">${s.name}</span>
-        <span class="s-price">${s.price}</span><br/>
-        <span class="s-dep">Deposit: $${s.deposit}</span>
+        <img src="img/${s.id}.jpg" alt="${s.name}" loading="lazy"
+             onerror="this.style.display='none'" />
+        <span class="s-body">
+          <span class="s-name">${s.name}</span>
+          <span class="s-price">${s.price}</span><br/>
+          <span class="s-dep">Deposit: $${s.deposit}</span>
+        </span>
       </button>`
     )
     .join("");
