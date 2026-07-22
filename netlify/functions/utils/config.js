@@ -10,7 +10,9 @@ export default {
 
   // Regular hours: Monday-Thursday, first appt 10:00 AM, last appt 5:00 PM.
   // Close is set to 18:00 so the last 60-min slot starts at 17:00.
-  // Fri/Sat/Sun = null (flex hours by request only; owner can add manually in admin).
+  // Fri/Sun = null (flex/Sunday by request only; owner adds these manually in admin).
+  // Sat = null and CLOSED (no appointments).
+  // Sunday prepay-in-full totals (incl. $25 flex fee): Colonic $135, Foot Detox $95, Colonic + Foot Detox $205.
   hours: {
     0: null,
     1: ["10:00", "18:00"],
@@ -54,7 +56,8 @@ export default {
     "The remainder may be paid in cash on the day of the appointment, or pre-paid in full.",
     "Appointments are scheduled and confirmed as deposits are received.",
     "Flex hours (days/times outside regular hours) are available for $25 per person per request - contact us to arrange.",
-    "Some Sundays are available. ALL Sundays must be PREPAID in full, including the $25 flex fee, prior to scheduling.",
+    "CLOSED on Saturdays - no appointments.",
+    "Some Sundays are available for a spa appointment. ALL Sundays must be PREPAID in full (includes the $25 flex fee) prior to scheduling: Colonic - $135 | Foot Detox - $95 | Colonic + Foot Detox - $205.",
     "If the payment options aren't available to you, someone else may make the deposit for you - have them indicate who the funds are for.",
   ],
 };
