@@ -1,0 +1,16 @@
+{
+  "name": "myrtles-detox-booking",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Booking site for Myrtle's Detox Spa - services, calendar reservations, and reservation-fee payments",
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  },
+  "devDependencies": {
+    "netlify-cli": "^17.0.0"
+  },
+  "scripts": {
+    "dev": "netlify dev"
+  }
+}

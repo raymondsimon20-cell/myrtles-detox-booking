@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Myrtle's Detox Spa — Book an Appointment</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <h1>Myrtle's Detox Spa</h1>
+    <p class="tagline">Book your appointment &amp; reserve your spot with a deposit</p>
+    <a class="fb-link" href="https://www.facebook.com/myrtlesdetoxspa" target="_blank" rel="noopener">Visit us on Facebook</a>
+  </header>
+
+  <main id="app">
+    <!-- Step 1: Service -->
+    <section class="step" id="step-service">
+      <h2><span class="step-num">1</span> Choose a service</h2>
+      <div id="service-list" class="service-grid"></div>
+    </section>
+
+    <!-- Step 2: Date & time -->
+    <section class="step hidden" id="step-datetime">
+      <h2><span class="step-num">2</span> Pick a date &amp; time</h2>
+      <p class="hint">Regular hours: Monday–Thursday, 10:00 AM – 5:00 PM (last appointment).
+         Need a different day or time? Flex hours are available for $25 — contact us on Facebook.</p>
+      <div class="calendar-head">
+        <button id="prev-month" type="button">&larr;</button>
+        <strong id="month-label"></strong>
+        <button id="next-month" type="button">&rarr;</button>
+      </div>
+      <div class="cal-grid cal-daynames">
+        <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+      </div>
+      <div id="calendar" class="cal-grid"></div>
+      <div id="slot-area" class="hidden">
+        <h3 id="slot-date-label"></h3>
+        <div id="slots" class="slot-grid"></div>
+      </div>
+    </section>
+
+    <!-- Step 3: Your details -->
+    <section class="step hidden" id="step-details">
+      <h2><span class="step-num">3</span> Your details</h2>
+      <form id="details-form">
+        <label>Full name* <input type="text" id="f-name" required maxlength="100" /></label>
+        <label>Phone <input type="tel" id="f-phone" maxlength="40" /></label>
+        <label>Email <input type="email" id="f-email" maxlength="100" /></label>
+        <label>Notes (optional) <textarea id="f-notes" maxlength="500" rows="2"></textarea></label>
+        <p class="hint">Please provide at least a phone number or email so we can reach you.</p>
+      </form>
+    </section>
+
+    <!-- Step 4: Deposit -->
+    <section class="step hidden" id="step-pay">
+      <h2><span class="step-num">4</span> Reserve with your deposit</h2>
+      <div id="summary" class="summary-box"></div>
+      <div id="pay-online" class="hidden">
+        <p><strong>Pay your deposit now</strong> with PayPal or Venmo — your appointment is confirmed instantly:</p>
+        <div id="paypal-buttons"></div>
+        <hr />
+      </div>
+      <div id="pay-other">
+        <p><strong>Or send your deposit by Zelle, Cash App, PayPal, or cash.</strong>
+        Your time slot will be held, and your appointment is confirmed once your deposit is received.</p>
+        <button id="reserve-btn" class="btn-primary" type="button">Reserve my slot</button>
+      </div>
+      <p id="pay-error" class="error hidden"></p>
+    </section>
+
+    <!-- Confirmation -->
+    <section class="step hidden" id="step-done">
+      <h2>✅ <span id="done-title">Reserved!</span></h2>
+      <div id="done-body"></div>
+      <button type="button" class="btn-primary" onclick="location.reload()">Book another appointment</button>
+    </section>
+
+    <!-- Policies -->
+    <section class="policies">
+      <h2>Deposit &amp; appointment policies</h2>
+      <ul id="policy-list"></ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>Myrtle's Detox Spa · <a href="https://www.facebook.com/myrtlesdetoxspa" target="_blank" rel="noopener">Facebook</a></p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

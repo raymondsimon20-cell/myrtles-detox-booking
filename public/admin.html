@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Myrtle's Detox Spa — Owner Admin</title>
+  <meta name="robots" content="noindex" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <h1>Owner Admin</h1>
+    <p class="tagline">Myrtle's Detox Spa — calendar &amp; bookings</p>
+  </header>
+
+  <main>
+    <section class="step" id="login-box">
+      <h2>Log in</h2>
+      <input type="password" id="admin-pass" placeholder="Admin password" />
+      <button class="btn-primary" id="login-btn" type="button">Log in</button>
+      <p id="login-error" class="error hidden"></p>
+    </section>
+
+    <section class="step hidden" id="admin-app">
+      <div class="calendar-head">
+        <button id="prev-month" type="button">&larr;</button>
+        <strong id="month-label"></strong>
+        <button id="next-month" type="button">&rarr;</button>
+      </div>
+      <p class="hint">
+        <span class="badge confirmed">confirmed</span>
+        <span class="badge awaiting-deposit">awaiting deposit</span>
+        <span class="badge pending">paying online</span>
+        <span class="badge blocked">blocked</span>
+        — click a day to manage it.
+      </p>
+      <div class="cal-grid cal-daynames">
+        <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+      </div>
+      <div id="calendar" class="cal-grid"></div>
+
+      <div id="day-detail" class="day-detail hidden">
+        <h3 id="day-label"></h3>
+        <button class="btn-danger" id="block-day-btn" type="button">Block whole day</button>
+        <div id="day-slots"></div>
+        <h4>Add a booking yourself (flex hours, Sundays, phone bookings)</h4>
+        <div class="manual-form">
+          <input type="text" id="m-name" placeholder="Client name" />
+          <input type="text" id="m-time" placeholder="Time (e.g. 14:00)" size="10" />
+          <select id="m-service"></select>
+          <input type="text" id="m-phone" placeholder="Phone" size="12" />
+          <button class="btn-primary" id="manual-btn" type="button">Add booking</button>
+        </div>
+        <p id="admin-error" class="error hidden"></p>
+      </div>
+    </section>
+  </main>
+
+  <script src="admin.js"></script>
+</body>
+</html>
