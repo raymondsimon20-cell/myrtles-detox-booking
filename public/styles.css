@@ -137,7 +137,19 @@ main { max-width: 780px; margin: 0 auto; padding: 1rem; }
 .btn-small { border: 1px solid #ddd2b8; background: #fff; border-radius: 8px; padding: 0.4rem 0.8rem; cursor: pointer; }
 
 .pay-instructions { background: #fff7ed; border: 1px solid #fdba74; border-radius: 10px; padding: 1rem; }
-.pay-instructions li { margin: 0.3rem 0; }
+.pay-instructions li { margin: 0.45rem 0; }
+.pay-instructions code {
+  background: #fff; border: 1px solid #f3d9b0; border-radius: 6px;
+  padding: 0.1rem 0.4rem; font-size: 0.95em; word-break: break-all;
+}
+.copy-btn {
+  border: 1px solid var(--gold); background: #fff; color: var(--gold-dark);
+  border-radius: 8px; padding: 0.2rem 0.7rem; margin-left: 0.3rem;
+  font: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+  min-height: 32px;
+}
+.copy-btn:hover { background: var(--gold-pale); }
+.copy-btn.copied { background: var(--ok); border-color: var(--ok); color: #fff; }
 
 /* Policies */
 .policies {

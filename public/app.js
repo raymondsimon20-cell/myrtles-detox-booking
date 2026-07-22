@@ -302,10 +302,13 @@
         $${r.depositDue} ${word} is received</strong>.</p>
         <div class="pay-instructions">
           <strong>Send your $${r.depositDue} ${word} to one of:</strong>
-          <ul>
-            <li><strong>Zelle:</strong> ${pm.zelle}</li>
-            <li><strong>Cash App:</strong> ${pm.cashApp}</li>
-            <li><strong>PayPal:</strong> ${pm.payPalHandle}</li>
+          <ul class="copy-list">
+            <li><strong>Zelle:</strong> <code>${pm.zelle}</code>
+              <button type="button" class="copy-btn" data-copy="${pm.zelle}">Copy</button></li>
+            <li><strong>Cash App:</strong> <code>${pm.cashApp}</code>
+              <button type="button" class="copy-btn" data-copy="${pm.cashApp}">Copy</button></li>
+            <li><strong>PayPal:</strong> <code>${pm.payPalHandle}</code>
+              <button type="button" class="copy-btn" data-copy="${pm.payPalHandle}">Copy</button></li>
             <li><strong>Cash:</strong> prepay in person</li>
           </ul>
           <p>Please include your name (<strong>${details().name}</strong>) with the payment.
@@ -318,6 +321,27 @@
       renderCalendar();
     }
   };
+
+  // Copy-to-clipboard for payment handles
+  document.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".copy-btn");
+    if (!btn) return;
+    const text = btn.dataset.copy;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      ta.remove();
+    }
+    const old = btn.textContent;
+    btn.textContent = "✓ Copied";
+    btn.classList.add("copied");
+    setTimeout(() => { btn.textContent = old; btn.classList.remove("copied"); }, 1600);
+  });
 
   function finish(title, bodyHtml) {
     $("done-title").textContent = title;
