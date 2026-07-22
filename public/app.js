@@ -57,6 +57,11 @@
     Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10), +t.slice(0, 2), +t.slice(3, 5));
   const bookableSlots = (dateStr) => {
     if (!state.service) return [];
+    // Sundays close for online booking after Thursday (prepay-by-Thursday rule)
+    if (isSunday(dateStr)) {
+      const dayStart = Date.UTC(+dateStr.slice(0, 4), +dateStr.slice(5, 7) - 1, +dateStr.slice(8, 10));
+      if (cutoffEpoch() - (cfg.minHoursAhead ?? 0) * 3600000 >= dayStart - 2 * 86400000) return [];
+    }
     const cut = cutoffEpoch();
     const myStation = stationOf(state.service);
     const takenTimes = (state.taken[dateStr] || [])

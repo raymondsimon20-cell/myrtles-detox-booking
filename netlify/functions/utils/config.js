@@ -71,7 +71,7 @@ export default {
     "Appointments are scheduled and confirmed as deposits are received.",
     "Flex hours (days/times outside regular hours) are available for $25 per person per request - contact us to arrange.",
     "CLOSED on Fridays and Saturdays - no appointments.",
-    "Sundays: two slots available (1:30 PM & 3:00 PM), $25 flex fee applied. Any service may be booked but must be PREPAID in full prior to scheduling: Colonic - $135 | Foot Detox - $95 | Colonic + Foot Detox - $205 | all other services - price + $25.",
+    "Sundays: two slots available (1:30 PM & 3:00 PM), $25 flex fee applied. Any service may be booked but must be PREPAID in full BY THE THURSDAY BEFORE: Colonic - $135 | Foot Detox - $95 | Colonic + Foot Detox - $205 | all other services - price + $25. Online Sunday booking closes Thursday night.",
     "If the payment options aren't available to you, someone else may make the deposit for you - have them indicate who the funds are for.",
   ],
 };

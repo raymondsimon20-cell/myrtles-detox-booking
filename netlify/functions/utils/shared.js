@@ -78,6 +78,12 @@ export function isValidSlot(service, date, time) {
   );
   // Must be at least minHoursAhead in the future
   if (slotEpoch < tzNowEpoch() + (config.minHoursAhead ?? 0) * 3600000) return false;
+  // Sundays must be prepaid in full by Thursday -> online booking closes end of Thursday
+  const dow = new Date(date + "T12:00:00Z").getUTCDay();
+  if (dow === 0) {
+    const dayStart = Date.UTC(+date.slice(0, 4), +date.slice(5, 7) - 1, +date.slice(8, 10));
+    if (tzNowEpoch() >= dayStart - 2 * 86400000) return false; // past Thursday 11:59 PM
+  }
   const max = new Date(Date.now() + config.bookingWindowDays * 86400000)
     .toISOString()
     .slice(0, 10);
