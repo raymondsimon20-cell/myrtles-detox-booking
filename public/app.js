@@ -31,11 +31,22 @@
     const dow = new Date(dateStr + "T12:00:00Z").getUTCDay();
     const hrs = cfg.hours[String(dow)];
     if (!hrs) return [];
+    if (!Array.isArray(hrs)) return hrs.slots || [];
     const toMin = (t) => +t.slice(0, 2) * 60 + +t.slice(3, 5);
     const out = [];
     for (let m = toMin(hrs[0]); m + cfg.slotMinutes <= toMin(hrs[1]); m += cfg.slotMinutes)
       out.push(pad(Math.floor(m / 60)) + ":" + pad(m % 60));
     return out;
+  }
+
+  const isSunday = (d) => d && new Date(d + "T12:00:00Z").getUTCDay() === 0;
+  function amountDue() {
+    const s = state.service;
+    if (!s) return 0;
+    if (!isSunday(state.date)) return s.deposit;
+    if (cfg.sundayPrepay && cfg.sundayPrepay[s.id] != null) return cfg.sundayPrepay[s.id];
+    const m = String(s.price).match(/\d+/);
+    return (m ? +m[0] : s.deposit) + (cfg.flexFee ?? 25);
   }
 
   // ---------- Policies ----------
@@ -198,10 +209,14 @@
   function updatePayStep() {
     if (!state.service) return;
     const s = state.service;
+    const due = amountDue();
+    const label = isSunday(state.date)
+      ? `Sunday prepayment (full amount, incl. $${cfg.flexFee ?? 25} flex fee): $${due}`
+      : `Deposit due now: $${due}`;
     $("summary").innerHTML = `
       <strong>${s.name}</strong> (${s.price})<br/>
       ${state.date ? fmtDate(state.date) : ""} ${state.time ? "at " + fmt12(state.time) : ""}<br/>
-      <strong>Deposit due now: $${s.deposit}</strong> <span class="hint">(non-refundable)</span>`;
+      <strong>${label}</strong> <span class="hint">(non-refundable)</span>`;
   }
 
   function details() {
@@ -248,11 +263,12 @@
         ...details(), payMethod: "other",
       });
       const pm = r.paymentMethods || cfg.paymentMethods;
+      const word = r.sunday ? "Sunday prepayment (full amount)" : "deposit";
       finish("Your slot is held!", `
         <p>Your appointment is <strong>held</strong> and will be <strong>confirmed once your
-        $${r.depositDue} deposit is received</strong>.</p>
+        $${r.depositDue} ${word} is received</strong>.</p>
         <div class="pay-instructions">
-          <strong>Send your $${r.depositDue} deposit to one of:</strong>
+          <strong>Send your $${r.depositDue} ${word} to one of:</strong>
           <ul>
             <li><strong>Zelle:</strong> ${pm.zelle}</li>
             <li><strong>Cash App:</strong> ${pm.cashApp}</li>

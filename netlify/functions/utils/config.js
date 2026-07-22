@@ -13,14 +13,23 @@ export default {
   // Fri/Sun = null (flex/Sunday by request only; owner adds these manually in admin).
   // Sat = null and CLOSED (no appointments).
   // Sunday prepay-in-full totals (incl. $25 flex fee): Colonic $135, Foot Detox $95, Colonic + Foot Detox $205.
+  // A day can be: null (closed), ["open","close"] (hourly slots), or { slots: [...] } (exact times).
   hours: {
-    0: null,
+    0: { slots: ["13:30", "15:00"] },
     1: ["10:00", "18:00"],
     2: ["10:00", "18:00"],
     3: ["10:00", "18:00"],
     4: ["10:00", "18:00"],
     5: null,
     6: null,
+  },
+
+  // Sundays are PREPAID IN FULL (includes the $25 flex fee).
+  // Exact totals here; any other service booked on Sunday = its price + flexFee.
+  flexFee: 25,
+  sundayPrepay: {
+    "colonic": 135,
+    "foot-detox": 95,
   },
 
   // price: display label. deposit: amount due to reserve (min($75, price)).

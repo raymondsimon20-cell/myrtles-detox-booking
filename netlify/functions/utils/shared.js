@@ -32,6 +32,7 @@ export function slotsForDate(dateStr) {
   const dow = new Date(dateStr + "T12:00:00Z").getUTCDay();
   const hours = config.hours[String(dow)];
   if (!hours) return [];
+  if (!Array.isArray(hours)) return hours.slots || [];
   const [open, close] = hours;
   const toMin = (t) => +t.slice(0, 2) * 60 + +t.slice(3, 5);
   const toStr = (m) =>
@@ -54,6 +55,17 @@ export function isValidSlot(date, time) {
     .slice(0, 10);
   if (date > max) return false;
   return true;
+}
+
+// Amount due to reserve: normal deposit, or FULL prepay (+flex fee) on Sundays
+export function amountDueFor(service, dateStr) {
+  const dow = new Date(dateStr + "T12:00:00Z").getUTCDay();
+  if (dow !== 0) return { amount: service.deposit, sunday: false };
+  const sp = config.sundayPrepay || {};
+  if (sp[service.id] != null) return { amount: sp[service.id], sunday: true };
+  const m = String(service.price).match(/\d+/);
+  const base = m ? +m[0] : service.deposit;
+  return { amount: base + (config.flexFee ?? 25), sunday: true };
 }
 
 // A slot entry is "active" (occupies the slot) unless it's an expired pending hold

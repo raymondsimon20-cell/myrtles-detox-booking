@@ -9,6 +9,7 @@ import {
   slotKey,
   isValidSlot,
   isActive,
+  amountDueFor,
 } from "./utils/shared.js";
 import { paymentsEnabled, createOrder } from "./utils/paypal.js";
 import { sendEmail, ownerEmail, fmtWhen, bookingLine, paymentInstructions } from "./utils/email.js";
@@ -42,13 +43,15 @@ export default async (req) => {
   if (isActive(existing))
     return json({ error: "Sorry, that slot was just taken. Please pick another." }, 409);
 
+  const { amount: amountDue, sunday } = amountDueFor(service, date);
   const bookingId = crypto.randomUUID();
   const base = {
     id: bookingId,
     type: "booking",
     serviceId,
     serviceName: service.name,
-    deposit: service.deposit,
+    deposit: amountDue,
+    sundayPrepay: sunday || undefined,
     date,
     time,
     name: String(name).trim().slice(0, 100),
@@ -62,8 +65,8 @@ export default async (req) => {
     if (!paymentsEnabled())
       return json({ error: "Online payment is not set up yet. Choose Zelle/CashApp/cash." }, 400);
     const order = await createOrder(
-      service.deposit,
-      `Deposit - ${service.name} on ${date} at ${time} - ${config.businessName}`
+      amountDue,
+      `${sunday ? "Sunday prepayment" : "Deposit"} - ${service.name} on ${date} at ${time} - ${config.businessName}`
     );
     await s.setJSON(key, {
       ...base,
@@ -77,35 +80,37 @@ export default async (req) => {
   // Zelle / CashApp / cash: hold the slot, owner confirms when deposit arrives
   await s.setJSON(key, { ...base, status: "awaiting-deposit" });
 
+  const word = sunday ? "prepayment (Sunday - full amount incl. flex fee)" : "deposit";
   await sendEmail(
     base.email,
-    `Your ${config.businessName} appointment is held — deposit needed to confirm`,
+    `Your ${config.businessName} appointment is held — ${sunday ? "prepayment" : "deposit"} needed to confirm`,
     `Hi ${base.name},
 
 Your appointment is HELD:
 
 ${service.name} — ${fmtWhen(date, time)}
-
-${paymentInstructions(service.deposit)}
+${sunday ? "\nSunday appointments must be PREPAID IN FULL (includes the $25 flex fee).\n" : ""}
+${paymentInstructions(amountDue, word)}
 
 See you soon!
 ${config.businessName}`
   );
   await sendEmail(
     ownerEmail(),
-    `New booking (awaiting $${service.deposit} deposit): ${base.name} — ${fmtWhen(date, time)}`,
-    `A new appointment was booked and is awaiting its deposit:
+    `New booking (awaiting $${amountDue} ${sunday ? "Sunday prepayment" : "deposit"}): ${base.name} — ${fmtWhen(date, time)}`,
+    `A new appointment was booked and is awaiting its ${sunday ? "Sunday prepayment (full amount)" : "deposit"}:
 
 ${bookingLine(base)}
-Deposit due: $${service.deposit}
+Amount due: $${amountDue}
 
-When the deposit arrives, open the admin page and click "Deposit received" to confirm it.`
+When the payment arrives, open the admin page and click "Deposit received" to confirm it.`
   );
 
   return json({
     bookingId,
     status: "awaiting-deposit",
     paymentMethods: config.paymentMethods,
-    depositDue: service.deposit,
+    depositDue: amountDue,
+    sunday,
   });
 };

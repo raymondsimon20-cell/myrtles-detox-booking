@@ -48,9 +48,9 @@ export function bookingLine(b) {
     b.notes ? `\nNotes: ${b.notes}` : ""}`;
 }
 
-export function paymentInstructions(deposit) {
+export function paymentInstructions(deposit, word = "deposit") {
   const pm = config.paymentMethods;
-  return `Send your $${deposit} deposit to one of:
+  return `Send your $${deposit} ${word} to one of:
   • Zelle: ${pm.zelle}
   • Cash App: ${pm.cashApp}
   • PayPal: ${pm.payPalHandle}

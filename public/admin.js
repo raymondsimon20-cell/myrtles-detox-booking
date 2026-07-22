@@ -106,6 +106,7 @@
     const dow = new Date(dateStr + "T12:00:00Z").getUTCDay();
     const hrs = cfg.hours[String(dow)];
     if (!hrs) return [];
+    if (!Array.isArray(hrs)) return hrs.slots || [];
     const toMin = (t) => +t.slice(0, 2) * 60 + +t.slice(3, 5);
     const out = [];
     for (let m = toMin(hrs[0]); m + cfg.slotMinutes <= toMin(hrs[1]); m += cfg.slotMinutes)

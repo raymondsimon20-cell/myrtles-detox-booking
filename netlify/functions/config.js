@@ -10,6 +10,8 @@ export default async () =>
     bookingWindowDays: config.bookingWindowDays,
     hours: config.hours,
     services: config.services,
+    flexFee: config.flexFee,
+    sundayPrepay: config.sundayPrepay,
     paymentMethods: config.paymentMethods,
     policies: config.policies,
     paymentsEnabled: paymentsEnabled(),
