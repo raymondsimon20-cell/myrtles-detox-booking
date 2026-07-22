@@ -10,7 +10,7 @@ Customers pick a service, choose an open time on the calendar, and reserve it wi
 3. Enter name + phone/email.
 4. Pay the deposit:
    - **PayPal / Venmo online** (once PayPal is set up) → confirmed instantly, or
-   - **Zelle / Cash App / PayPal handle / cash** → the slot is held as "awaiting deposit"; the customer sees the payment instructions (Zelle: myrtle.rogers724@gmail.com, Cash App: 340-513-2343, PayPal: MyrtleRogers296) and the owner confirms once the money arrives.
+   - **Zelle / Cash App / PayPal handle / cash** → the slot is held as "awaiting deposit"; the customer sees the payment instructions (Zelle: myrtle_rogers@yahoo.com, Cash App: 340-513-2343, PayPal: MyrtleRogers296) and the owner confirms once the money arrives.
 5. All deposit policies (non-refundable, $50 late-cancel/no-show, Sundays prepaid + $25 flex fee, etc.) are shown on the page.
 
 **Owner admin page (`/admin.html`)** — password protected
