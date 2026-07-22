@@ -28,8 +28,11 @@ h1, h2, h3, .step h2 { font-family: Georgia, "Times New Roman", serif; }
   border-bottom: 3px solid var(--gold);
 }
 .site-logo {
-  width: 110px; height: 110px; border-radius: 50%;
-  box-shadow: 0 2px 12px rgba(90, 70, 20, 0.18);
+  width: 132px; height: 132px; border-radius: 50%;
+  border: 3px solid var(--gold-light);
+  outline: 1px solid var(--gold);
+  box-shadow: 0 3px 14px rgba(150, 115, 31, 0.25);
+  background: #fff;
   display: block; margin: 0 auto 0.6rem;
 }
 .site-header h1 {
