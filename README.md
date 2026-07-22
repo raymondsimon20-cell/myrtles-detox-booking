@@ -85,14 +85,13 @@ Edit `netlify/functions/utils/config.js` (services, deposits, hours, policies, p
 
 ## Photo credits
 
-Logo from the spa's YouTube channel. Owner-provided photos: body-analysis.jpg (Quantum Resonance poster), colonic.jpg (LIBBE device), hydromassage.jpg, foot-detox.jpg.
+Logo from the spa's YouTube channel. Owner-provided photos: body-analysis.jpg (Quantum Resonance poster), colonic.jpg (LIBBE device), hydromassage.jpg, foot-detox.jpg, sauna.jpg.
 
 Remaining photos are free-licensed (Creative Commons via Openverse):
 
 - consultation.jpg: "Nutritionist displaying fresh fruits..." by nenadstojkovicart (CC BY) — flickr.com/photos/202846129@N03/54538370547
 - colonic-abd.jpg: "Total care and relaxation" by Scubaspa Maldives (CC BY) — flickr.com/photos/145748390@N03/30273731091
 - body-wrap.jpg: "Spa treatment room portrait" by bloggeratlarge (CC0) — flickr.com/photos/184934270@N04/52262895342
-- sauna.jpg: "Sauna at Hotel Arthur" by Hotel Arthur Helsinki (CC BY) — flickr.com/photos/88467564@N06/9314082768
 - body-part-manip.jpg: "massage" by Collin Parker (CC BY) — flickr.com/photos/158282012@N07/43781411011
 
 To swap any photo: replace the file in `public/img/` (640×480 works best), keep the same filename.
