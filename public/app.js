@@ -143,20 +143,23 @@
     updatePayStep();
   }
 
+  const goToStep2 = () =>
+    $("step-datetime").scrollIntoView({ behavior: "smooth", block: "start" });
+
   $("service-list").addEventListener("click", (e) => {
     const card = e.target.closest(".service-card");
     if (!card) return;
     selectCard(card);
-    if (!e.target.closest("select")) card.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (!e.target.closest("select")) goToStep2();
   });
   $("service-list").addEventListener("change", (e) => {
     const card = e.target.closest(".service-card");
-    if (card && e.target.classList.contains("s-duration")) selectCard(card);
+    if (card && e.target.classList.contains("s-duration")) { selectCard(card); goToStep2(); }
   });
   $("service-list").addEventListener("keydown", (e) => {
     if (e.key !== "Enter" && e.key !== " ") return;
     const card = e.target.closest(".service-card");
-    if (card && !e.target.closest("select")) { e.preventDefault(); selectCard(card); }
+    if (card && !e.target.closest("select")) { e.preventDefault(); selectCard(card); goToStep2(); }
   });
 
   // ---------- Step 2: calendar ----------
