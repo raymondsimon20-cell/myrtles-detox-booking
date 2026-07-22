@@ -64,8 +64,9 @@ export default {
 
   policies: [
     "Appointments must be booked at least 36 hours in advance.",
-    "A non-refundable deposit is required from ALL clients: $75, or the full amount if the service fee is less.",
-    "$50.00 will be secured for all missed appointments and those cancelled or rescheduled less than 24 hours ahead of appointment time.",
+    "A non-refundable deposit is required from ALL clients: $75, or the full amount if the service fee is less. Deposits are never refunded as cash, but may carry over as credit per the policies below.",
+    "Cancel or reschedule MORE than 24 hours ahead: your full deposit is credited toward your new appointment.",
+    "Missed appointments, or those cancelled/rescheduled LESS than 24 hours ahead: a $50.00 fee is secured from the deposit; any remainder is credited toward a future appointment (e.g. $75 deposit = $25 credit).",
     "The remainder may be paid in cash on the day of the appointment, or pre-paid in full.",
     "Appointments are scheduled and confirmed as deposits are received.",
     "Flex hours (days/times outside regular hours) are available for $25 per person per request - contact us to arrange.",
