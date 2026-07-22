@@ -85,11 +85,10 @@ Edit `netlify/functions/utils/config.js` (services, deposits, hours, policies, p
 
 ## Photo credits
 
-Logo from the spa's YouTube channel. Owner-provided photos: body-analysis.jpg (Quantum Resonance poster), colonic.jpg (LIBBE device), consultation.jpg (Quantum Bio-Electric Analyzer), hydromassage.jpg, foot-detox.jpg, sauna.jpg.
+Logo from the spa's YouTube channel. Owner-provided photos: body-analysis.jpg (Quantum Resonance poster), colonic.jpg (LIBBE device), consultation.jpg (Quantum Bio-Electric Analyzer), colonic-abd.jpg (LIBBE flyer), hydromassage.jpg, foot-detox.jpg, sauna.jpg.
 
 Remaining photos are free-licensed (Creative Commons via Openverse):
 
-- colonic-abd.jpg: "Total care and relaxation" by Scubaspa Maldives (CC BY) — flickr.com/photos/145748390@N03/30273731091
 - body-wrap.jpg: "Spa treatment room portrait" by bloggeratlarge (CC0) — flickr.com/photos/184934270@N04/52262895342
 - body-part-manip.jpg: "massage" by Collin Parker (CC BY) — flickr.com/photos/158282012@N07/43781411011
 
