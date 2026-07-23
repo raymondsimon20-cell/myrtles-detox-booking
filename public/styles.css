@@ -114,6 +114,12 @@ main { max-width: 780px; margin: 0 auto; padding: 1rem; }
 }
 .slot-btn:hover { border-color: var(--gold); }
 .slot-btn.selected { background: var(--gold); color: #fff; border-color: var(--gold); }
+.slot-btn.flex-slot { border-style: dashed; border-color: var(--amber); }
+.flex-tag {
+  display: block; font-size: 0.72rem; font-weight: 700; color: var(--amber);
+  text-transform: uppercase; letter-spacing: 0.02em;
+}
+.slot-btn.selected .flex-tag { color: #ffe9c9; }
 
 /* Form */
 #details-form label { display: block; margin: 0.6rem 0; font-weight: 600; font-size: 0.95rem; }

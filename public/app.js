@@ -73,13 +73,18 @@
   };
 
   const isSunday = (d) => d && new Date(d + "T12:00:00Z").getUTCDay() === 0;
+  const isFlexTime = (d, t) =>
+    !isSunday(d) && state.service && (state.service.flexTimes || []).includes(t);
   function amountDue() {
     const s = state.service;
     if (!s) return 0;
-    if (!isSunday(state.date)) return s.deposit;
-    if (cfg.sundayPrepay && cfg.sundayPrepay[s.id] != null) return cfg.sundayPrepay[s.id];
-    const m = String(s.price).match(/\d+/);
-    return (m ? +m[0] : s.deposit) + (cfg.flexFee ?? 25);
+    if (isSunday(state.date)) {
+      if (cfg.sundayPrepay && cfg.sundayPrepay[s.id] != null) return cfg.sundayPrepay[s.id];
+      const m = String(s.price).match(/\d+/);
+      return (m ? +m[0] : s.deposit) + (cfg.flexFee ?? 25);
+    }
+    if (isFlexTime(state.date, state.time)) return s.deposit + (cfg.flexFee ?? 25);
+    return s.deposit;
   }
 
   // ---------- Policies ----------
@@ -221,7 +226,11 @@
     const slots = bookableSlots(state.date);
     $("slot-date-label").textContent = fmtDate(state.date);
     $("slots").innerHTML = slots.length
-      ? slots.map((t) => `<button type="button" class="slot-btn" data-time="${t}">${fmt12(t)}</button>`).join("")
+      ? slots.map((t) => {
+          const flex = isFlexTime(state.date, t);
+          return `<button type="button" class="slot-btn ${flex ? "flex-slot" : ""}" data-time="${t}">
+            ${fmt12(t)}${flex ? `<span class="flex-tag">flex +$${cfg.flexFee ?? 25}</span>` : ""}</button>`;
+        }).join("")
       : "<p class='hint'>No open times this day — please pick another.</p>";
     $("slot-area").classList.remove("hidden");
   }
@@ -245,7 +254,9 @@
     const due = amountDue();
     const label = isSunday(state.date)
       ? `Sunday prepayment (full amount, incl. $${cfg.flexFee ?? 25} flex fee): $${due}`
-      : `Deposit due now: $${due}`;
+      : isFlexTime(state.date, state.time)
+        ? `Deposit + $${cfg.flexFee ?? 25} flex-time fee: $${due}`
+        : `Deposit due now: $${due}`;
     $("summary").innerHTML = `
       <strong>${s.name}</strong> (${s.price})<br/>
       ${state.date ? fmtDate(state.date) : ""} ${state.time ? "at " + fmt12(state.time) : ""}<br/>
@@ -296,7 +307,11 @@
         ...details(), payMethod: "other",
       });
       const pm = r.paymentMethods || cfg.paymentMethods;
-      const word = r.sunday ? "Sunday prepayment (full amount)" : "deposit";
+      const word = r.sunday
+        ? "Sunday prepayment (full amount)"
+        : r.flex
+          ? `deposit (includes $${cfg.flexFee ?? 25} flex-time fee)`
+          : "deposit";
       finish("Your slot is held!", `
         <p>Your appointment is <strong>held</strong> and will be <strong>confirmed once your
         $${r.depositDue} ${word} is received</strong>.</p>

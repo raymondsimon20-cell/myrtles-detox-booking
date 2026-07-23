@@ -91,15 +91,28 @@ export function isValidSlot(service, date, time) {
   return true;
 }
 
-// Amount due to reserve: normal deposit, or FULL prepay (+flex fee) on Sundays
-export function amountDueFor(service, dateStr) {
+// Is this weekday time a flex slot for the service (outside regular hours -> +$25)?
+export function isFlexTime(service, dateStr, time) {
   const dow = new Date(dateStr + "T12:00:00Z").getUTCDay();
-  if (dow !== 0) return { amount: service.deposit, sunday: false };
-  const sp = config.sundayPrepay || {};
-  if (sp[service.id] != null) return { amount: sp[service.id], sunday: true };
-  const m = String(service.price).match(/\d+/);
-  const base = m ? +m[0] : service.deposit;
-  return { amount: base + (config.flexFee ?? 25), sunday: true };
+  if (dow === 0) return false; // Sunday fee handled separately
+  return Boolean(service && service.flexTimes && service.flexTimes.includes(time));
+}
+
+// Amount due to reserve: normal deposit, deposit+flex fee for flex times,
+// or FULL prepay (+flex fee) on Sundays
+export function amountDueFor(service, dateStr, time) {
+  const dow = new Date(dateStr + "T12:00:00Z").getUTCDay();
+  if (dow === 0) {
+    const sp = config.sundayPrepay || {};
+    if (sp[service.id] != null) return { amount: sp[service.id], sunday: true, flex: false };
+    const m = String(service.price).match(/\d+/);
+    const base = m ? +m[0] : service.deposit;
+    return { amount: base + (config.flexFee ?? 25), sunday: true, flex: false };
+  }
+  if (isFlexTime(service, dateStr, time)) {
+    return { amount: service.deposit + (config.flexFee ?? 25), sunday: false, flex: true };
+  }
+  return { amount: service.deposit, sunday: false, flex: false };
 }
 
 // A slot entry is "active" (occupies the slot) unless it's an expired pending hold

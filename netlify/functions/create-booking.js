@@ -45,7 +45,7 @@ export default async (req) => {
   if (isActive(existing))
     return json({ error: "Sorry, that slot was just taken. Please pick another." }, 409);
 
-  const { amount: amountDue, sunday } = amountDueFor(service, date);
+  const { amount: amountDue, sunday, flex } = amountDueFor(service, date, time);
   const bookingId = crypto.randomUUID();
   const base = {
     id: bookingId,
@@ -55,6 +55,7 @@ export default async (req) => {
     serviceName: service.name,
     deposit: amountDue,
     sundayPrepay: sunday || undefined,
+    flexTime: flex || undefined,
     date,
     time,
     name: String(name).trim().slice(0, 100),
@@ -83,7 +84,11 @@ export default async (req) => {
   // Zelle / CashApp / cash: hold the slot, owner confirms when deposit arrives
   await s.setJSON(key, { ...base, status: "awaiting-deposit" });
 
-  const word = sunday ? "prepayment (Sunday - full amount incl. flex fee)" : "deposit";
+  const word = sunday
+    ? "prepayment (Sunday - full amount incl. flex fee)"
+    : flex
+      ? `deposit (includes $${config.flexFee ?? 25} flex-time fee)`
+      : "deposit";
   await sendEmail(
     base.email,
     `Your ${config.businessName} appointment is held — ${sunday ? "prepayment" : "deposit"} needed to confirm`,
@@ -115,5 +120,6 @@ When the payment arrives, open the admin page and click "Deposit received" to co
     paymentMethods: config.paymentMethods,
     depositDue: amountDue,
     sunday,
+    flex,
   });
 };
