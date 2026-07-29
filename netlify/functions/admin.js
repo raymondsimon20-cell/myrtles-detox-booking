@@ -134,6 +134,18 @@ ${config.businessName}`
       const entry = await s.get(key, { type: "json" });
       if (!entry) return json({ error: "Nothing in that slot" }, 404);
       await s.delete(key);
+      // Late-cancel fee kept from the deposit -> archive as cancelled so the
+      // fee shows up in year reports (tax income) and stays searchable
+      const fee = Number(body.cancelFee) || 0;
+      if (entry.type === "booking" && fee > 0) {
+        await s.setJSON(`archive:${date}:${time}:${station}`, {
+          ...entry,
+          status: "cancelled",
+          cancelFee: fee,
+          cancelledAt: new Date().toISOString(),
+          archivedAt: new Date().toISOString(),
+        });
+      }
       if (entry.type === "booking") {
         await sendEmail(
           entry.email,
@@ -227,6 +239,26 @@ ${config.businessName}`
       return json({ results: results.slice(0, 200) });
     }
 
+    case "record-payment": {
+      // Record money actually received for a booking (deposit remainder, cash
+      // on the day, etc.) - works on live AND archived bookings.
+      if (!validDate(date) || !validTime(time) || !station)
+        return json({ error: "Bad date/time/station" }, 400);
+      const amount = Number(body.amount);
+      if (!(amount > 0)) return json({ error: "Amount must be a positive number" }, 400);
+      const method = String(body.method || "cash").trim().slice(0, 30) || "cash";
+      let key = slotKey(date, time, station);
+      let entry = await s.get(key, { type: "json" });
+      if (!entry) {
+        key = `archive:${date}:${time}:${station}`;
+        entry = await s.get(key, { type: "json" });
+      }
+      if (!entry || entry.type !== "booking") return json({ error: "No booking there" }, 404);
+      const payments = [...(entry.payments || []), { amount, method, at: new Date().toISOString() }];
+      await s.setJSON(key, { ...entry, payments });
+      return json({ ok: true, paidTotal: payments.reduce((a, p) => a + (Number(p.amount) || 0), 0) });
+    }
+
     case "archive": {
       // Move one past booking out of the live calendar into the archive
       if (!validDate(date) || !validTime(time) || !station)
@@ -279,14 +311,23 @@ ${config.businessName}`
         }
       }
       rows.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+      // deposits: counted once received (status confirmed).
+      // collected: extra payments recorded (cash remainder, day-of, etc.).
+      // cancelFees: late-cancel fees kept from deposits.
       const summary = {};
+      let cancelFees = 0;
       for (const r of rows) {
+        if (r.status === "cancelled") {
+          cancelFees += Number(r.cancelFee) || 0;
+          continue;
+        }
         const k = r.serviceName || "Other";
-        summary[k] ||= { count: 0, deposits: 0 };
+        summary[k] ||= { count: 0, deposits: 0, collected: 0 };
         summary[k].count++;
-        summary[k].deposits += Number(r.deposit) || 0;
+        if (r.status === "confirmed") summary[k].deposits += Number(r.deposit) || 0;
+        summary[k].collected += (r.payments || []).reduce((a, p) => a + (Number(p.amount) || 0), 0);
       }
-      return json({ rows, summary });
+      return json({ rows, summary, cancelFees });
     }
 
     default:

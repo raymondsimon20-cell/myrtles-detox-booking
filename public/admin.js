@@ -153,11 +153,13 @@
         const contact = [e.phone, e.email].filter(Boolean).join(" · ");
         const confirmBtn = e.status === "awaiting-deposit"
           ? `<button class="btn-primary" data-act="confirm" data-time="${t}" data-station="${station}">Deposit received ✓</button>` : "";
+        const paid = (e.payments || []).reduce((a, p) => a + (+p.amount || 0), 0);
         return `<div class="slot-row"><span class="t">${fmt12(t)}</span>
           <span class="who"><span class="badge ${e.status}">${e.status}</span>
-            <strong>${e.name || "?"}</strong> — ${e.serviceName || ""}${e.deposit ? ` ($${e.deposit})` : ""}
+            <strong>${e.name || "?"}</strong> — ${e.serviceName || ""}${e.deposit ? ` ($${e.deposit})` : ""}${paid ? ` · <strong>paid $${paid}</strong>` : ""}
             <br/><span class="hint">${contact}${e.notes ? " · " + e.notes : ""}</span></span>
           ${confirmBtn}
+          <button class="btn-small" data-act="pay" data-time="${t}" data-station="${station}">💵 Payment</button>
           <button class="btn-danger" data-act="cancel" data-time="${t}" data-station="${station}">Cancel</button></div>`;
       }).join("");
       html += `<h4 style="margin:0.9rem 0 0.2rem">${label}</h4>${rows}`;
@@ -193,13 +195,32 @@
     $("m-time").innerHTML = opts.join("");
   }
 
+  // Shared prompt flow for recording a payment against a booking
+  async function promptPayment(date, time, station) {
+    const amount = Number(prompt("Amount received ($):", ""));
+    if (!(amount > 0)) return false;
+    const method = (prompt("Payment method (cash / Zelle / Cash App / PayPal):", "cash") || "cash").trim();
+    await api({ action: "record-payment", date, time, station, amount, method });
+    return true;
+  }
+
   $("day-slots").addEventListener("click", async (e) => {
     const btn = e.target.closest("button[data-act]");
     if (!btn) return;
     const { act, time, station } = btn.dataset;
-    if (act === "cancel" && !confirm(`Cancel the ${fmt12(time)} entry? This frees the slot.`)) return;
     try {
       showError("admin-error", null);
+      if (act === "pay") {
+        if (await promptPayment(state.selDate, time, station)) await refresh();
+        return;
+      }
+      if (act === "cancel") {
+        if (!confirm(`Cancel the ${fmt12(time)} entry? This frees the slot.`)) return;
+        const fee = Number(prompt("Late-cancel fee kept from the deposit ($)? Enter 0 if none:", "50")) || 0;
+        await api({ action: "cancel", date: state.selDate, time, station, cancelFee: fee });
+        await refresh();
+        return;
+      }
       await api({ action: act, date: state.selDate, time, station });
       await refresh();
     } catch (err) { showError("admin-error", err.message); }
@@ -253,15 +274,21 @@
 
   function resultRow(e) {
     const contact = [e.phone, e.email].filter(Boolean).join(" · ");
-    const badge = e.archived
-      ? `<span class="badge blocked">archived</span>`
-      : `<span class="badge ${e.status}">${e.status}</span>`;
+    const badge = e.status === "cancelled"
+      ? `<span class="badge blocked">cancelled${e.cancelFee ? ` ($${e.cancelFee} fee)` : ""}</span>`
+      : e.archived
+        ? `<span class="badge blocked">archived</span>`
+        : `<span class="badge ${e.status}">${e.status}</span>`;
+    const paid = (e.payments || []).reduce((a, p) => a + (+p.amount || 0), 0);
     const archiveBtn = !e.archived && e.date < todayStr()
       ? `<button class="btn-small" data-arch="1" data-date="${e.date}" data-time="${e.time}" data-station="${e.station}">Archive</button>`
       : "";
+    const payBtn = e.status !== "cancelled"
+      ? `<button class="btn-small" data-pay="1" data-date="${e.date}" data-time="${e.time}" data-station="${e.station}">💵 Payment</button>`
+      : "";
     return `<div class="slot-row"><span class="t">${fmtD(e.date)} ${fmt12(e.time)}</span>
-      <span class="who">${badge} <strong>${e.name || "?"}</strong> — ${e.serviceName || ""}${e.deposit ? ` ($${e.deposit}${e.flexFee ? ` incl. $${e.flexFee} flex` : ""})` : ""}
-      <br/><span class="hint">${contact}${e.notes ? " · " + e.notes : ""}</span></span>${archiveBtn}</div>`;
+      <span class="who">${badge} <strong>${e.name || "?"}</strong> — ${e.serviceName || ""}${e.deposit ? ` ($${e.deposit}${e.flexFee ? ` incl. $${e.flexFee} flex` : ""})` : ""}${paid ? ` · <strong>paid $${paid}</strong>` : ""}
+      <br/><span class="hint">${contact}${e.notes ? " · " + e.notes : ""}</span></span>${payBtn}${archiveBtn}</div>`;
   }
 
   async function runSearch() {
@@ -279,10 +306,15 @@
   $("search-q").addEventListener("keydown", (e) => { if (e.key === "Enter") runSearch(); });
 
   $("search-results").addEventListener("click", async (e) => {
-    const btn = e.target.closest("button[data-arch]");
-    if (!btn) return;
+    const arch = e.target.closest("button[data-arch]");
+    const pay = e.target.closest("button[data-pay]");
+    if (!arch && !pay) return;
     try {
-      await api({ action: "archive", date: btn.dataset.date, time: btn.dataset.time, station: btn.dataset.station });
+      if (pay) {
+        if (!(await promptPayment(pay.dataset.date, pay.dataset.time, pay.dataset.station))) return;
+      } else {
+        await api({ action: "archive", date: arch.dataset.date, time: arch.dataset.time, station: arch.dataset.station });
+      }
       await runSearch();
       await refresh();
     } catch (err) { $("search-results").innerHTML = `<p class='error'>${err.message}</p>`; }
@@ -313,18 +345,25 @@
       const r = await api({ action: "export", year });
       lastReport = { ...r, year };
       const names = Object.keys(r.summary).sort();
-      let total = 0, count = 0;
+      let dep = 0, col = 0, count = 0;
       const rows = names.map((n) => {
-        total += r.summary[n].deposits; count += r.summary[n].count;
+        const v = r.summary[n];
+        dep += v.deposits; col += v.collected; count += v.count;
         return `<div class="slot-row"><span class="who"><strong>${n}</strong></span>
-          <span class="t">${r.summary[n].count} appt${r.summary[n].count === 1 ? "" : "s"}</span>
-          <span class="t">$${r.summary[n].deposits} deposits</span></div>`;
+          <span class="t">${v.count} appt${v.count === 1 ? "" : "s"}</span>
+          <span class="t">$${v.deposits} deposits</span>
+          <span class="t">$${v.collected} payments</span></div>`;
       }).join("");
+      const fees = r.cancelFees || 0;
       $("report-results").innerHTML = r.rows.length
-        ? rows + `<div class="slot-row"><span class="who"><strong>TOTAL</strong></span>
+        ? rows +
+          (fees ? `<div class="slot-row"><span class="who"><strong>Late-cancel fees kept</strong></span>
+            <span class="t"></span><span class="t"></span><span class="t">$${fees}</span></div>` : "") +
+          `<div class="slot-row"><span class="who"><strong>TOTAL REVENUE</strong></span>
             <span class="t"><strong>${count} appts</strong></span>
-            <span class="t"><strong>$${total} deposits</strong></span></div>
-          <p class="hint">Deposits are the amounts tracked by the booking system; cash paid on the day isn't recorded here.</p>`
+            <span class="t"></span>
+            <span class="t"><strong>$${dep + col + fees}</strong></span></div>
+          <p class="hint">Deposits count once confirmed; "payments" are amounts recorded with the 💵 Payment button (cash remainders, day-of payments). Record those as they come in and this becomes a true revenue report.</p>`
         : "<p class='hint'>No appointments found for that year.</p>";
       if (r.rows.length) $("csv-btn").classList.remove("hidden");
     } catch (err) { $("report-results").innerHTML = `<p class='error'>${err.message}</p>`; }
@@ -333,10 +372,13 @@
   $("csv-btn").onclick = () => {
     if (!lastReport) return;
     const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const head = ["date", "time", "service", "client", "phone", "email", "status", "deposit", "flex_fee", "archived", "notes"];
+    const head = ["date", "time", "service", "client", "phone", "email", "status", "deposit", "flex_fee", "payments_recorded", "payment_methods", "cancel_fee", "archived", "notes"];
     const lines = [head.join(",")].concat(lastReport.rows.map((e) => [
       e.date, e.time, e.serviceName, e.name, e.phone, e.email, e.status,
-      e.deposit ?? "", e.flexFee ?? "", e.archived ? "yes" : "no", e.notes,
+      e.deposit ?? "", e.flexFee ?? "",
+      (e.payments || []).reduce((a, p) => a + (+p.amount || 0), 0) || "",
+      (e.payments || []).map((p) => `${p.method} $${p.amount}`).join("; "),
+      e.cancelFee ?? "", e.archived ? "yes" : "no", e.notes,
     ].map(esc).join(",")));
     const blob = new Blob([lines.join("\n")], { type: "text/csv" });
     const a = document.createElement("a");
