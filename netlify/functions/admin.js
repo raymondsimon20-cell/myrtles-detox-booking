@@ -12,7 +12,7 @@ import {
   config, json, store, slotKey, parseSlotKey, isActive, stationOf, slotsForService,
   isCoreTime, nowInTz,
 } from "./utils/shared.js";
-import { sendEmail, fmtWhen } from "./utils/email.js";
+import { sendEmail, fmtWhen, paymentInstructions } from "./utils/email.js";
 
 // One representative service per station (for schedules/labels)
 function stations() {
@@ -161,23 +161,47 @@ ${config.businessName}`
       if (isActive(existing)) return json({ error: "Slot already taken/blocked" }, 409);
       const flex = !isCoreTime(date, time);
       const flexFee = flex ? (config.flexFee ?? 25) : 0;
-      await s.setJSON(key, {
+      const email = String(body.email || "").trim().slice(0, 100);
+      // requestPayment: hold the slot as awaiting-deposit and email the client
+      // payment instructions; owner confirms with "Deposit received" as usual.
+      const requestPayment = Boolean(body.requestPayment && email);
+      const deposit = service ? service.deposit + flexFee : flexFee || undefined;
+      const entry = {
         id: crypto.randomUUID(),
         type: "booking",
-        status: "confirmed",
+        status: requestPayment ? "awaiting-deposit" : "confirmed",
         manual: true,
         serviceId: body.serviceId || null,
         station: st,
         serviceName: service ? service.name : body.serviceName || "Owner-added",
-        deposit: service ? service.deposit + flexFee : undefined,
+        deposit,
         flexTime: flex || undefined,
         flexFee: flexFee || undefined,
         name: String(body.name || "").trim().slice(0, 100),
         phone: String(body.phone || "").trim().slice(0, 40),
+        email,
         notes: String(body.notes || "").trim().slice(0, 500),
         createdAt: new Date().toISOString(),
-      });
-      return json({ ok: true, flex, flexFee });
+      };
+      await s.setJSON(key, entry);
+      if (requestPayment && deposit) {
+        const word = flex ? `deposit (includes $${config.flexFee ?? 25} flex-time fee)` : "deposit";
+        await sendEmail(
+          email,
+          `Your ${config.businessName} appointment is held — deposit needed to confirm`,
+          `Hi ${entry.name},
+
+Your appointment is HELD:
+
+${entry.serviceName} — ${fmtWhen(date, time)}
+
+${paymentInstructions(deposit, word)}
+
+See you soon!
+${config.businessName}`
+        );
+      }
+      return json({ ok: true, flex, flexFee, emailSent: requestPayment && Boolean(deposit) });
     }
 
     case "search": {

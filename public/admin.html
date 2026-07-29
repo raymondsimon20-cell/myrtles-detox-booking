@@ -51,6 +51,10 @@
           <select id="m-time"></select>
           <select id="m-service"></select>
           <input type="text" id="m-phone" placeholder="Phone" size="12" />
+          <input type="email" id="m-email" placeholder="Email (optional)" />
+          <label class="hint" style="display:inline-flex;align-items:center;gap:0.3rem">
+            <input type="checkbox" id="m-request-pay" /> Email them a payment request (deposit due — appointment shows "awaiting deposit" until you confirm)
+          </label>
           <button class="btn-primary" id="manual-btn" type="button">Add booking</button>
         </div>
         <p id="admin-error" class="error hidden"></p>

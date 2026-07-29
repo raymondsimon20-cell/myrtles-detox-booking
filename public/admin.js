@@ -216,6 +216,10 @@
   $("manual-btn").onclick = async () => {
     const time = $("m-time").value;
     if (!/^\d{2}:\d{2}$/.test(time)) return showError("admin-error", "Pick a time");
+    const requestPay = $("m-request-pay").checked;
+    const email = $("m-email").value.trim();
+    if (requestPay && !email)
+      return showError("admin-error", "Enter an email to send the payment request to");
     try {
       showError("admin-error", null);
       const r = await api({
@@ -225,9 +229,15 @@
         name: $("m-name").value,
         serviceId: $("m-service").value || null,
         phone: $("m-phone").value,
+        email,
+        requestPayment: requestPay,
       });
-      $("m-name").value = $("m-phone").value = "";
-      if (r.flex) alert(`Booking added with the $${r.flexFee} flex fee (outside Mon–Thu 10–5).`);
+      $("m-name").value = $("m-phone").value = $("m-email").value = "";
+      $("m-request-pay").checked = false;
+      const notes = [];
+      if (r.flex) notes.push(`$${r.flexFee} flex fee applied (outside Mon–Thu 10–5)`);
+      if (r.emailSent) notes.push("payment-request email sent — confirm with “Deposit received” when it arrives");
+      if (notes.length) alert(`Booking added. ${notes.join("; ")}.`);
       await refresh();
     } catch (err) { showError("admin-error", err.message); }
   };
