@@ -28,7 +28,7 @@
     });
 
   const stationOf = (s) =>
-    s.group ? s.group.toLowerCase().replace(/[^a-z0-9]+/g, "-") : s.id;
+    s.station || (s.group ? s.group.toLowerCase().replace(/[^a-z0-9]+/g, "-") : s.id);
 
   function slotsForDate(dateStr) {
     const dow = new Date(dateStr + "T12:00:00Z").getUTCDay();

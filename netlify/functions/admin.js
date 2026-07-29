@@ -10,6 +10,7 @@
 //   { action: "manual-book", date, time, serviceId, name, phone?, notes? } -> owner-created booking (any day/time)
 import {
   config, json, store, slotKey, parseSlotKey, isActive, stationOf, slotsForService,
+  isCoreTime, nowInTz,
 } from "./utils/shared.js";
 import { sendEmail, fmtWhen } from "./utils/email.js";
 
@@ -150,12 +151,16 @@ ${config.businessName}`
     }
 
     case "manual-book": {
+      // Owner can book ANY date/time (no 36-hour minimum). Times outside core
+      // hours (Mon-Thu 10 AM - 5 PM starts) automatically carry the $25 flex fee.
       if (!validDate(date) || !validTime(time)) return json({ error: "Bad date/time" }, 400);
       const service = config.services.find((sv) => sv.id === body.serviceId);
       const st = service ? stationOf(service) : "manual";
       const key = slotKey(date, time, st);
       const existing = await s.get(key, { type: "json" });
       if (isActive(existing)) return json({ error: "Slot already taken/blocked" }, 409);
+      const flex = !isCoreTime(date, time);
+      const flexFee = flex ? (config.flexFee ?? 25) : 0;
       await s.setJSON(key, {
         id: crypto.randomUUID(),
         type: "booking",
@@ -164,12 +169,100 @@ ${config.businessName}`
         serviceId: body.serviceId || null,
         station: st,
         serviceName: service ? service.name : body.serviceName || "Owner-added",
+        deposit: service ? service.deposit + flexFee : undefined,
+        flexTime: flex || undefined,
+        flexFee: flexFee || undefined,
         name: String(body.name || "").trim().slice(0, 100),
         phone: String(body.phone || "").trim().slice(0, 40),
         notes: String(body.notes || "").trim().slice(0, 500),
         createdAt: new Date().toISOString(),
       });
+      return json({ ok: true, flex, flexFee });
+    }
+
+    case "search": {
+      // Search ALL appointments - current and archived - by name, phone, email,
+      // service, or date fragment. Used for looking up past customer orders.
+      const q = String(body.query || "").trim().toLowerCase();
+      if (q.length < 2) return json({ error: "Type at least 2 characters" }, 400);
+      const results = [];
+      for (const prefix of ["slot:", "archive:"]) {
+        const { blobs } = await s.list({ prefix });
+        for (const b of blobs) {
+          const m = b.key.match(/^(slot|archive):(\d{4}-\d{2}-\d{2}):(\d{2}:\d{2}):(.+)$/);
+          if (!m) continue;
+          const entry = await s.get(b.key, { type: "json" });
+          if (!entry || entry.type !== "booking") continue;
+          const hay = [entry.name, entry.phone, entry.email, entry.serviceName, m[2]]
+            .filter(Boolean).join(" ").toLowerCase();
+          if (!hay.includes(q)) continue;
+          results.push({ date: m[2], time: m[3], station: m[4], archived: m[1] === "archive", ...entry });
+        }
+      }
+      results.sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
+      return json({ results: results.slice(0, 200) });
+    }
+
+    case "archive": {
+      // Move one past booking out of the live calendar into the archive
+      if (!validDate(date) || !validTime(time) || !station)
+        return json({ error: "Bad date/time/station" }, 400);
+      const key = slotKey(date, time, station);
+      const entry = await s.get(key, { type: "json" });
+      if (!entry) return json({ error: "Nothing in that slot" }, 404);
+      await s.setJSON(`archive:${date}:${time}:${station}`, {
+        ...entry, archivedAt: new Date().toISOString(),
+      });
+      await s.delete(key);
       return json({ ok: true });
+    }
+
+    case "archive-past": {
+      // Bulk: archive every booking before today; past blocks are just deleted
+      const { date: today } = nowInTz();
+      const { blobs } = await s.list({ prefix: "slot:" });
+      let archived = 0;
+      for (const b of blobs) {
+        const m = parseSlotKey(b.key);
+        if (!m || m[1] >= today) continue;
+        const entry = await s.get(b.key, { type: "json" });
+        if (!entry) continue;
+        if (entry.type === "booking") {
+          await s.setJSON(`archive:${m[1]}:${m[2]}:${m[3]}`, {
+            ...entry, archivedAt: new Date().toISOString(),
+          });
+          archived++;
+        }
+        await s.delete(b.key);
+      }
+      return json({ ok: true, archived });
+    }
+
+    case "export": {
+      // All bookings (live + archived) for a year - totals per service and
+      // row-level data the UI turns into a tax-ready CSV.
+      const year = String(body.year || "");
+      if (!/^\d{4}$/.test(year)) return json({ error: "year must be YYYY" }, 400);
+      const rows = [];
+      for (const prefix of [`slot:${year}`, `archive:${year}`]) {
+        const { blobs } = await s.list({ prefix });
+        for (const b of blobs) {
+          const m = b.key.match(/^(slot|archive):(\d{4}-\d{2}-\d{2}):(\d{2}:\d{2}):(.+)$/);
+          if (!m) continue;
+          const entry = await s.get(b.key, { type: "json" });
+          if (!entry || entry.type !== "booking") continue;
+          rows.push({ date: m[2], time: m[3], station: m[4], archived: m[1] === "archive", ...entry });
+        }
+      }
+      rows.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+      const summary = {};
+      for (const r of rows) {
+        const k = r.serviceName || "Other";
+        summary[k] ||= { count: 0, deposits: 0 };
+        summary[k].count++;
+        summary[k].deposits += Number(r.deposit) || 0;
+      }
+      return json({ rows, summary });
     }
 
     default:

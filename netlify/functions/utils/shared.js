@@ -10,9 +10,18 @@ export const store = () =>
 // Each service (or duration group) is its own "station" — different stations can
 // be booked at overlapping times; the same station can't be double-booked.
 export const stationOf = (service) =>
-  service.group
+  service.station ||
+  (service.group
     ? service.group.toLowerCase().replace(/[^a-z0-9]+/g, "-")
-    : service.id;
+    : service.id);
+
+// Core hours: Mon-Thu, starts from 10:00 AM through 5:00 PM.
+// Anything else (earlier/later, Fri/Sat/Sun) is flex time -> +$25.
+export function isCoreTime(dateStr, time) {
+  const dow = new Date(dateStr + "T12:00:00Z").getUTCDay();
+  if (dow < 1 || dow > 4) return false;
+  return time >= "10:00" && time <= "17:00";
+}
 
 export const slotKey = (date, time, station) => `slot:${date}:${time}:${station}`;
 

@@ -44,15 +44,38 @@
         <h3 id="day-label"></h3>
         <button class="btn-danger" id="block-day-btn" type="button">Block whole day</button>
         <div id="day-slots"></div>
-        <h4>Add a booking yourself (flex hours, Sundays, phone bookings)</h4>
+        <h4>Add a booking yourself (any day &amp; time — no 36-hour limit)</h4>
+        <p class="hint">Times from 8:00 AM. Anything outside Mon–Thu 10 AM – 5 PM adds the $25 flex fee automatically.</p>
         <div class="manual-form">
           <input type="text" id="m-name" placeholder="Client name" />
-          <input type="text" id="m-time" placeholder="Time (e.g. 14:00)" size="10" />
+          <select id="m-time"></select>
           <select id="m-service"></select>
           <input type="text" id="m-phone" placeholder="Phone" size="12" />
           <button class="btn-primary" id="manual-btn" type="button">Add booking</button>
         </div>
         <p id="admin-error" class="error hidden"></p>
+      </div>
+
+      <div class="day-detail" id="search-box">
+        <h3>Search &amp; archive appointments</h3>
+        <p class="hint">Searches every appointment — current and archived — by name, phone, email, service, or date (e.g. "2026-03"). Useful for looking up past customer orders.</p>
+        <div class="manual-form">
+          <input type="text" id="search-q" placeholder="Name, phone, service, or date" />
+          <button class="btn-primary" id="search-btn" type="button">Search</button>
+          <button class="btn-small" id="archive-past-btn" type="button">Archive all past appointments</button>
+        </div>
+        <div id="search-results"></div>
+      </div>
+
+      <div class="day-detail" id="report-box">
+        <h3>Year report (for taxes)</h3>
+        <p class="hint">Totals per service plus a CSV download of every appointment — current and archived — for the year.</p>
+        <div class="manual-form">
+          <select id="report-year"></select>
+          <button class="btn-primary" id="report-btn" type="button">Run report</button>
+          <button class="btn-small hidden" id="csv-btn" type="button">Download CSV</button>
+        </div>
+        <div id="report-results"></div>
       </div>
     </section>
   </main>

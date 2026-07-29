@@ -41,8 +41,10 @@ export default {
   services: [
     { id: "body-analysis", name: "Vital Health Body Analysis", price: "$50", deposit: 50 },
     { id: "consultation", name: "Consultation (post Body Analysis)", price: "$100", deposit: 75 },
-    { id: "colonic", name: "Colonic", price: "$110", deposit: 75, times: ["10:00", "11:30", "13:30", "15:30", "17:00"], note: "5:30 PM start by request (flex)" },
-    { id: "colonic-abd", name: "Colonic & Abdominal Manipulation Treatment", price: "$175", deposit: 75 },
+    // Colonic & Colonic+Abdominal share ONE station (same room/equipment): booking
+    // either one takes that hour for both. Both use the hourly 10-5 grid.
+    { id: "colonic", name: "Colonic", price: "$110", deposit: 75, station: "colonic" },
+    { id: "colonic-abd", name: "Colonic & Abdominal Manipulation Treatment", price: "$175", deposit: 75, station: "colonic" },
     { id: "foot-detox", name: "Foot Detox", price: "$70", deposit: 70, times: ["11:00", "12:30", "14:30", "16:00", "16:30"] },
     { id: "hydromassage-10", name: "HydroMassage — 10 min", label: "10 min", price: "$40", deposit: 40, group: "HydroMassage", times: ["10:30", "12:00", "14:00", "16:00", "16:30"], img: "hydromassage" },
     { id: "hydromassage-15", name: "HydroMassage — 15 min", label: "15 min", price: "$60", deposit: 60, group: "HydroMassage", times: ["10:30", "12:00", "14:00", "16:00", "16:30"], img: "hydromassage" },

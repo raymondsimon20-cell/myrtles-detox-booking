@@ -103,7 +103,7 @@
 
   // ---------- Day detail (grouped by service/station) ----------
   const stationOf = (s) =>
-    s.group ? s.group.toLowerCase().replace(/[^a-z0-9]+/g, "-") : s.id;
+    s.station || (s.group ? s.group.toLowerCase().replace(/[^a-z0-9]+/g, "-") : s.id);
 
   function stationList() {
     const seen = new Map();
@@ -174,7 +174,23 @@
     }
     $("day-slots").innerHTML = html ||
       "<p class='hint'>Closed this day — use the form below to add flex-hour bookings.</p>";
+    renderTimeSelect(date);
     $("day-detail").classList.remove("hidden");
+  }
+
+  // Owner can book any time from 8:00 AM; outside Mon-Thu 10-5 = +$25 flex
+  const isCore = (dateStr, t) => {
+    const dow = new Date(dateStr + "T12:00:00Z").getUTCDay();
+    return dow >= 1 && dow <= 4 && t >= "10:00" && t <= "17:00";
+  };
+
+  function renderTimeSelect(dateStr) {
+    const opts = [];
+    for (let m = 8 * 60; m <= 18.5 * 60; m += 30) {
+      const t = pad(Math.floor(m / 60)) + ":" + pad(m % 60);
+      opts.push(`<option value="${t}">${fmt12(t)}${isCore(dateStr, t) ? "" : " (+$25 flex)"}</option>`);
+    }
+    $("m-time").innerHTML = opts.join("");
   }
 
   $("day-slots").addEventListener("click", async (e) => {
@@ -198,11 +214,11 @@
   };
 
   $("manual-btn").onclick = async () => {
-    const time = $("m-time").value.trim();
-    if (!/^\d{2}:\d{2}$/.test(time)) return showError("admin-error", "Time must be HH:MM, e.g. 14:00");
+    const time = $("m-time").value;
+    if (!/^\d{2}:\d{2}$/.test(time)) return showError("admin-error", "Pick a time");
     try {
       showError("admin-error", null);
-      await api({
+      const r = await api({
         action: "manual-book",
         date: state.selDate,
         time,
@@ -210,8 +226,113 @@
         serviceId: $("m-service").value || null,
         phone: $("m-phone").value,
       });
-      $("m-name").value = $("m-time").value = $("m-phone").value = "";
+      $("m-name").value = $("m-phone").value = "";
+      if (r.flex) alert(`Booking added with the $${r.flexFee} flex fee (outside Mon–Thu 10–5).`);
       await refresh();
     } catch (err) { showError("admin-error", err.message); }
+  };
+
+  // ---------- Search & archive ----------
+  const fmtD = (d) => new Date(d + "T12:00:00Z").toLocaleDateString("en-US", {
+    month: "short", day: "numeric", year: "numeric", timeZone: "UTC",
+  });
+  const todayStr = () => {
+    const n = new Date();
+    return `${n.getFullYear()}-${pad(n.getMonth() + 1)}-${pad(n.getDate())}`;
+  };
+
+  function resultRow(e) {
+    const contact = [e.phone, e.email].filter(Boolean).join(" · ");
+    const badge = e.archived
+      ? `<span class="badge blocked">archived</span>`
+      : `<span class="badge ${e.status}">${e.status}</span>`;
+    const archiveBtn = !e.archived && e.date < todayStr()
+      ? `<button class="btn-small" data-arch="1" data-date="${e.date}" data-time="${e.time}" data-station="${e.station}">Archive</button>`
+      : "";
+    return `<div class="slot-row"><span class="t">${fmtD(e.date)} ${fmt12(e.time)}</span>
+      <span class="who">${badge} <strong>${e.name || "?"}</strong> — ${e.serviceName || ""}${e.deposit ? ` ($${e.deposit}${e.flexFee ? ` incl. $${e.flexFee} flex` : ""})` : ""}
+      <br/><span class="hint">${contact}${e.notes ? " · " + e.notes : ""}</span></span>${archiveBtn}</div>`;
+  }
+
+  async function runSearch() {
+    const q = $("search-q").value.trim();
+    if (q.length < 2) { $("search-results").innerHTML = "<p class='hint'>Type at least 2 characters.</p>"; return; }
+    $("search-results").innerHTML = "<p class='hint'>Searching…</p>";
+    try {
+      const r = await api({ action: "search", query: q });
+      $("search-results").innerHTML = r.results.length
+        ? r.results.map(resultRow).join("")
+        : "<p class='hint'>No matches.</p>";
+    } catch (err) { $("search-results").innerHTML = `<p class='error'>${err.message}</p>`; }
+  }
+  $("search-btn").onclick = runSearch;
+  $("search-q").addEventListener("keydown", (e) => { if (e.key === "Enter") runSearch(); });
+
+  $("search-results").addEventListener("click", async (e) => {
+    const btn = e.target.closest("button[data-arch]");
+    if (!btn) return;
+    try {
+      await api({ action: "archive", date: btn.dataset.date, time: btn.dataset.time, station: btn.dataset.station });
+      await runSearch();
+      await refresh();
+    } catch (err) { $("search-results").innerHTML = `<p class='error'>${err.message}</p>`; }
+  });
+
+  $("archive-past-btn").onclick = async () => {
+    if (!confirm("Move every appointment before today into the archive? They stay searchable and in year reports, but leave the calendar.")) return;
+    try {
+      const r = await api({ action: "archive-past" });
+      alert(`Archived ${r.archived} past appointment${r.archived === 1 ? "" : "s"}.`);
+      await refresh();
+    } catch (err) { alert(err.message); }
+  };
+
+  // ---------- Year report / CSV export (taxes) ----------
+  {
+    const y = new Date().getFullYear();
+    $("report-year").innerHTML = [y, y - 1, y - 2]
+      .map((v) => `<option value="${v}">${v}</option>`).join("");
+  }
+  let lastReport = null;
+
+  $("report-btn").onclick = async () => {
+    $("report-results").innerHTML = "<p class='hint'>Building report…</p>";
+    $("csv-btn").classList.add("hidden");
+    try {
+      const year = $("report-year").value;
+      const r = await api({ action: "export", year });
+      lastReport = { ...r, year };
+      const names = Object.keys(r.summary).sort();
+      let total = 0, count = 0;
+      const rows = names.map((n) => {
+        total += r.summary[n].deposits; count += r.summary[n].count;
+        return `<div class="slot-row"><span class="who"><strong>${n}</strong></span>
+          <span class="t">${r.summary[n].count} appt${r.summary[n].count === 1 ? "" : "s"}</span>
+          <span class="t">$${r.summary[n].deposits} deposits</span></div>`;
+      }).join("");
+      $("report-results").innerHTML = r.rows.length
+        ? rows + `<div class="slot-row"><span class="who"><strong>TOTAL</strong></span>
+            <span class="t"><strong>${count} appts</strong></span>
+            <span class="t"><strong>$${total} deposits</strong></span></div>
+          <p class="hint">Deposits are the amounts tracked by the booking system; cash paid on the day isn't recorded here.</p>`
+        : "<p class='hint'>No appointments found for that year.</p>";
+      if (r.rows.length) $("csv-btn").classList.remove("hidden");
+    } catch (err) { $("report-results").innerHTML = `<p class='error'>${err.message}</p>`; }
+  };
+
+  $("csv-btn").onclick = () => {
+    if (!lastReport) return;
+    const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const head = ["date", "time", "service", "client", "phone", "email", "status", "deposit", "flex_fee", "archived", "notes"];
+    const lines = [head.join(",")].concat(lastReport.rows.map((e) => [
+      e.date, e.time, e.serviceName, e.name, e.phone, e.email, e.status,
+      e.deposit ?? "", e.flexFee ?? "", e.archived ? "yes" : "no", e.notes,
+    ].map(esc).join(",")));
+    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `myrtles-appointments-${lastReport.year}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
   };
 })();
