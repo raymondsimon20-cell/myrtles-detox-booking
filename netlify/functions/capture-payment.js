@@ -2,7 +2,7 @@
 // Body: { orderId, date, time, serviceId } - captures the PayPal deposit and confirms the booking
 import { config, json, store, slotKey, stationOf } from "./utils/shared.js";
 import { captureOrder } from "./utils/paypal.js";
-import { sendEmail, ownerEmail, fmtWhen, bookingLine } from "./utils/email.js";
+import { sendEmail, ownerEmail, fmtWhen, bookingLine, buildIcs } from "./utils/email.js";
 
 export default async (req) => {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
@@ -51,8 +51,11 @@ ${entry.serviceName} — ${fmtWhen(entry.date, entry.time)}
 
 The remainder can be paid in cash on the day of your appointment.
 
+A calendar invite is attached — open it (or tap "Add to calendar" in Gmail) to save this appointment to your Google, Apple, or Outlook calendar.
+
 See you soon!
-${config.businessName}`
+${config.businessName}`,
+    buildIcs(entry)
   );
   await sendEmail(
     ownerEmail(),
