@@ -160,6 +160,7 @@
             <br/><span class="hint">${contact}${e.notes ? " · " + e.notes : ""}</span></span>
           ${confirmBtn}
           <button class="btn-small" data-act="pay" data-time="${t}" data-station="${station}">💵 Payment</button>
+          <button class="btn-small" data-act="reschedule" data-time="${t}" data-station="${station}">↪ Move</button>
           <button class="btn-danger" data-act="cancel" data-time="${t}" data-station="${station}">Cancel</button></div>`;
       }).join("");
       html += `<h4 style="margin:0.9rem 0 0.2rem">${label}</h4>${rows}`;
@@ -171,6 +172,7 @@
         `<div class="slot-row"><span class="t">${fmt12(e.time)}</span>
           <span class="who"><span class="badge ${e.status}">${e.status}</span>
             <strong>${e.name || "?"}</strong> — ${e.serviceName || ""}</span>
+          <button class="btn-small" data-act="reschedule" data-time="${e.time}" data-station="${e.station}">↪ Move</button>
           <button class="btn-danger" data-act="cancel" data-time="${e.time}" data-station="${e.station}">Cancel</button></div>`
       ).join("");
     }
@@ -214,6 +216,25 @@
         if (await promptPayment(state.selDate, time, station)) await refresh();
         return;
       }
+      if (act === "reschedule") {
+        const newDate = (prompt("Move to which date? (YYYY-MM-DD)", state.selDate) || "").trim();
+        if (!newDate) return;
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate))
+          return showError("admin-error", "Date must look like 2026-09-14");
+        const newTime = (prompt("Move to which time? (24-hour HH:MM, e.g. 14:30 for 2:30 PM)", time) || "").trim();
+        if (!newTime) return;
+        if (!/^\d{2}:\d{2}$/.test(newTime))
+          return showError("admin-error", "Time must look like 14:30");
+        const r = await api({ action: "reschedule", date: state.selDate, time, station, newDate, newTime });
+        const notes = [];
+        if (r.flex) notes.push("the new time is outside Mon–Thu 10–5 (flex — settle any $25 fee difference yourself)");
+        notes.push(r.emailSent
+          ? "the client was emailed the new time with an updated calendar invite"
+          : "no email on file, so let the client know yourself");
+        alert(`Moved to ${newDate} ${fmt12(newTime)} — ${notes.join("; ")}.`);
+        await refresh();
+        return;
+      }
       if (act === "cancel") {
         if (!confirm(`Cancel the ${fmt12(time)} entry? This frees the slot.`)) return;
         const fee = Number(prompt("Late-cancel fee kept from the deposit ($)? Enter 0 if none:", "50")) || 0;
@@ -252,12 +273,17 @@
         phone: $("m-phone").value,
         email,
         requestPayment: requestPay,
+        sendConfirmation: $("m-send-confirm").checked,
       });
       $("m-name").value = $("m-phone").value = $("m-email").value = "";
       $("m-request-pay").checked = false;
+      $("m-send-confirm").checked = true;
       const notes = [];
       if (r.flex) notes.push(`$${r.flexFee} flex fee applied (outside Mon–Thu 10–5)`);
-      if (r.emailSent) notes.push("payment-request email sent — confirm with “Deposit received” when it arrives");
+      if (r.emailSent)
+        notes.push(requestPay
+          ? "payment-request email sent — confirm with “Deposit received” when it arrives"
+          : "confirmation email with calendar invite sent");
       if (notes.length) alert(`Booking added. ${notes.join("; ")}.`);
       await refresh();
     } catch (err) { showError("admin-error", err.message); }

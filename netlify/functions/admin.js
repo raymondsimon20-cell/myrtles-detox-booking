@@ -6,13 +6,14 @@
 //   { action: "block-day", date }                              -> block every station's slots that day
 //   { action: "unblock", date, time, station }
 //   { action: "confirm", date, time, station }                 -> mark awaiting-deposit booking confirmed
+//   { action: "reschedule", date, time, station, newDate, newTime } -> move a booking, keep everything else
 //   { action: "cancel", date, time, station }                  -> cancel booking/blocked slot (frees it)
 //   { action: "manual-book", date, time, serviceId, name, phone?, notes? } -> owner-created booking (any day/time)
 import {
   config, json, store, slotKey, parseSlotKey, isActive, stationOf, slotsForService,
   isCoreTime, nowInTz,
 } from "./utils/shared.js";
-import { sendEmail, fmtWhen, paymentInstructions } from "./utils/email.js";
+import { sendEmail, fmtWhen, paymentInstructions, buildIcs } from "./utils/email.js";
 
 // One representative service per station (for schedules/labels)
 function stations() {
@@ -121,12 +122,73 @@ We received your ${entry.sundayPrepay ? "prepayment" : "deposit"} — your appoi
 
 ${entry.serviceName} — ${fmtWhen(date, time)}
 
-${entry.sundayPrepay ? "" : "The remainder can be paid in cash on the day of your appointment.\n\n"}See you soon!
-${config.businessName}`
+${entry.sundayPrepay ? "" : "The remainder can be paid in cash on the day of your appointment.\n\n"}A calendar invite is attached — open it (or tap "Add to calendar" in Gmail) to save this appointment to your Google, Apple, or Outlook calendar.
+
+See you soon!
+${config.businessName}`,
+        buildIcs({ ...entry, date, time })
       );
       return json({ ok: true });
     }
 
+    case "reschedule": {
+      // Move a booking to a new date/time. EVERYTHING carries over — name,
+      // contact, service, deposit, payments, notes — so nothing is retyped.
+      // The client gets ONE "appointment moved" email with an updated
+      // calendar invite (same event id, bumped SEQUENCE) that replaces the
+      // old event on their calendar. Deposits are NOT changed here; if the
+      // new time adds/removes a flex fee, settle that separately.
+      const { newDate, newTime } = body;
+      if (!validDate(date) || !validTime(time) || !station)
+        return json({ error: "Bad date/time/station" }, 400);
+      if (!validDate(newDate) || !validTime(newTime))
+        return json({ error: "New date must be YYYY-MM-DD and time HH:MM (24h)" }, 400);
+      const oldKey = slotKey(date, time, station);
+      const entry = await s.get(oldKey, { type: "json" });
+      if (!entry || entry.type !== "booking") return json({ error: "No booking there" }, 404);
+      if (newDate === date && newTime === time)
+        return json({ error: "That's the same date and time" }, 400);
+      const newKey = slotKey(newDate, newTime, station);
+      const target = await s.get(newKey, { type: "json" });
+      if (isActive(target))
+        return json({ error: "The new slot is already booked or blocked" }, 409);
+      const flex = !isCoreTime(newDate, newTime);
+      const moved = {
+        ...entry,
+        // Online bookings store date/time inside the entry too (and "list"/
+        // "search" let the entry win over the key) — keep them in sync.
+        date: newDate,
+        time: newTime,
+        flexTime: flex || undefined,
+        icsSequence: (Number(entry.icsSequence) || 0) + 1,
+        rescheduledFrom: `${date} ${time}`,
+        rescheduledAt: new Date().toISOString(),
+      };
+      await s.setJSON(newKey, moved);
+      await s.delete(oldKey);
+      if (entry.email) {
+        await sendEmail(
+          entry.email,
+          `Your ${config.businessName} appointment moved to ${fmtWhen(newDate, newTime)}`,
+          `Hi ${entry.name},
+
+Your appointment has been RESCHEDULED:
+
+${entry.serviceName}
+Old: ${fmtWhen(date, time)}
+New: ${fmtWhen(newDate, newTime)}
+
+Everything else about your booking stays the same${entry.status === "confirmed" ? " and it remains confirmed" : ""}.
+
+The attached calendar invite has the new time — open it (or tap "Add to calendar" in Gmail) and it will replace the old event. If the old time still shows on your calendar, just delete it.
+
+See you soon!
+${config.businessName}`,
+          buildIcs({ ...moved, date: newDate, time: newTime })
+        );
+      }
+      return json({ ok: true, flex, emailSent: Boolean(entry.email) });
+    }
     case "cancel": {
       if (!validDate(date) || !validTime(time) || !station)
         return json({ error: "Bad date/time/station" }, 400);
@@ -196,6 +258,7 @@ ${config.businessName}`
         createdAt: new Date().toISOString(),
       };
       await s.setJSON(key, entry);
+      let emailSent = false;
       if (requestPayment && deposit) {
         const word = flex ? `deposit (includes $${config.flexFee ?? 25} flex-time fee)` : "deposit";
         await sendEmail(
@@ -212,8 +275,29 @@ ${paymentInstructions(deposit, word)}
 See you soon!
 ${config.businessName}`
         );
+        emailSent = true;
+      } else if (email && body.sendConfirmation !== false) {
+        // Owner booked it directly as confirmed — send the client a
+        // confirmation with the calendar invite attached (unless the
+        // "email confirmation" box was unticked).
+        await sendEmail(
+          email,
+          `Confirmed! Your ${config.businessName} appointment`,
+          `Hi ${entry.name},
+
+Your appointment is CONFIRMED:
+
+${entry.serviceName} — ${fmtWhen(date, time)}
+
+A calendar invite is attached — open it (or tap "Add to calendar" in Gmail) to save this appointment to your Google, Apple, or Outlook calendar.
+
+See you soon!
+${config.businessName}`,
+          buildIcs({ ...entry, date, time })
+        );
+        emailSent = true;
       }
-      return json({ ok: true, flex, flexFee, emailSent: requestPayment && Boolean(deposit) });
+      return json({ ok: true, flex, flexFee, emailSent });
     }
 
     case "search": {
