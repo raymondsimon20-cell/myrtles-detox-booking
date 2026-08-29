@@ -321,7 +321,7 @@
           <ul class="copy-list">
             <li><strong>Zelle:</strong> <code>${pm.zelle}</code>
               <button type="button" class="copy-btn" data-copy="${pm.zelle}">Copy</button></li>
-            <li><strong>Cash App:</strong> <code>${pm.cashTag ? "$" + pm.cashTag : pm.cashApp}</code>
+            <li><strong>Cash App:</strong> <code>$${pm.cashTag || pm.cashApp}</code>
               <button type="button" class="copy-btn" data-copy="${pm.cashTag ? "$" + pm.cashTag : pm.cashApp}">Copy</button>
               ${pm.cashTag ? `<a class="copy-btn paylink" target="_blank" rel="noopener"
                  href="https://cash.app/$${pm.cashTag}/${r.depositDue}">Pay $${r.depositDue} in Cash App →</a>` : ""}</li>
