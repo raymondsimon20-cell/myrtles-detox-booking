@@ -378,12 +378,16 @@
   if (products.length) {
     $("product-list").innerHTML = products.map((p) => {
       const canBuy = typeof p.price === "number";
-      const qty = `<select class="p-qty" aria-label="Quantity" data-id="${p.id}">
-        ${[1, 2, 3, 4, 5].map((n) => `<option value="${n}">Qty: ${n}</option>`).join("")}</select>`;
       const buy = canBuy
-        ? (cfg.paymentsEnabled && cfg.paypalClientId
-            ? `${qty}<div class="pp-product" id="pp-${p.id}"></div>`
-            : `<span class="hint">Call or text 340.513.2343 to order.</span>`)
+        ? `<select class="p-qty" aria-label="Quantity" data-id="${p.id}">
+             ${[1, 2, 3, 4, 5].map((n) => `<option value="${n}">Qty: ${n}</option>`).join("")}</select>
+           ${cfg.paymentsEnabled && cfg.paypalClientId ? `<div class="pp-product" id="pp-${p.id}"></div>` : ""}
+           <button type="button" class="btn-small p-order-btn" data-id="${p.id}">Pay by Zelle / Cash App / PayPal</button>
+           <span class="p-form hidden" data-id="${p.id}">
+             <input type="text" class="p-name" placeholder="Your name*" maxlength="100" />
+             <input type="text" class="p-contact" placeholder="Phone or email*" maxlength="100" />
+             <button type="button" class="btn-primary p-place" data-id="${p.id}">Place order</button>
+           </span>`
         : `<span class="hint">Call or text 340.513.2343 for pricing &amp; to order.</span>`;
       return `<div class="service-card product-card" data-id="${p.id}">
         <img src="img/${p.img || p.id}.jpg" alt="${p.name}" loading="lazy"
@@ -397,6 +401,58 @@
       </div>`;
     }).join("");
   }
+
+  function productInstructions(pm, amount, name) {
+    return `<strong>✅ Order placed!</strong><br/>
+      <span class="hint">Send your <strong>$${amount}</strong> to one of these and we'll contact you for pickup:</span>
+      <ul class="copy-list">
+        <li><strong>Zelle:</strong> <code>${pm.zelle}</code>
+          <button type="button" class="copy-btn" data-copy="${pm.zelle}">Copy</button></li>
+        <li><strong>Cash App:</strong> <code>${pm.cashTag ? "$" + pm.cashTag : pm.cashApp}</code>
+          <button type="button" class="copy-btn" data-copy="${pm.cashTag ? "$" + pm.cashTag : pm.cashApp}">Copy</button>
+          ${pm.cashTag ? `<a class="copy-btn paylink" target="_blank" rel="noopener"
+             href="https://cash.app/$${pm.cashTag}/${amount}">Pay $${amount} in Cash App →</a>` : ""}</li>
+        <li><strong>PayPal:</strong> <code>${pm.payPalHandle}</code>
+          <button type="button" class="copy-btn" data-copy="${pm.payPalHandle}">Copy</button>
+          <a class="copy-btn paylink" target="_blank" rel="noopener"
+             href="https://paypal.me/${pm.payPalHandle}/${amount}">Pay $${amount} in PayPal →</a></li>
+        <li><strong>Cash:</strong> pay in person at pickup</li>
+      </ul>
+      <span class="hint">Please include your name (<strong>${name}</strong>) with the payment.</span>`;
+  }
+
+  $("product-list").addEventListener("click", async (e) => {
+    const orderBtn = e.target.closest(".p-order-btn");
+    if (orderBtn) {
+      const form = document.querySelector(`.p-form[data-id="${orderBtn.dataset.id}"]`);
+      form.classList.toggle("hidden");
+      return;
+    }
+    const placeBtn = e.target.closest(".p-place");
+    if (!placeBtn) return;
+    const id = placeBtn.dataset.id;
+    const form = document.querySelector(`.p-form[data-id="${id}"]`);
+    const name = form.querySelector(".p-name").value.trim();
+    const contact = form.querySelector(".p-contact").value.trim();
+    if (name.length < 2) return showShopError("Please enter your name.");
+    if (!contact) return showShopError("Please enter a phone number or email.");
+    showShopError(null);
+    placeBtn.disabled = true;
+    try {
+      const qty = +(document.querySelector(`.p-qty[data-id="${id}"]`)?.value || 1);
+      const isEmail = contact.includes("@");
+      const r = await api("/api/create-product-order", {
+        productId: id, quantity: qty, payMethod: "other",
+        name, phone: isEmail ? "" : contact, email: isEmail ? contact : "",
+      });
+      const pm = r.paymentMethods || cfg.paymentMethods;
+      placeBtn.closest(".product-card").querySelector(".p-buy").innerHTML =
+        productInstructions(pm, r.amount, name);
+    } catch (err) {
+      showShopError(err.message);
+      placeBtn.disabled = false;
+    }
+  });
 
   function showShopError(msg) {
     const el = $("shop-error");

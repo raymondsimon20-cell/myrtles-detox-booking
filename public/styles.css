@@ -206,3 +206,10 @@ a.paylink:hover { background: var(--gold-dark); }
 .p-qty { margin: 0.35rem 0 0.5rem; padding: 0.3rem 0.45rem; border-radius: 6px; font-size: 0.95rem; }
 .pp-product { margin-top: 0.25rem; min-height: 34px; }
 .p-buy { display: block; margin-top: 0.25rem; }
+
+/* Product order-by-Zelle form */
+.p-order-btn { display: inline-block; margin-top: 0.35rem; }
+.p-form { display: block; margin-top: 0.4rem; }
+.p-form.hidden { display: none; }
+.p-form input { width: 100%; box-sizing: border-box; margin-bottom: 0.35rem; padding: 0.4rem 0.5rem; border-radius: 6px; border: 1px solid #ccc; font-size: 0.95rem; }
+.p-form .btn-primary { width: 100%; }
