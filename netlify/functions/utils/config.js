@@ -83,9 +83,8 @@ export default {
   ],
 
   paymentMethods: {
-    zelle: "myrtle_rogers@yahoo.com",
-    cashApp: "340-513-2343",
-    cashTag: "MyrtlesDetox",
+    zelle: "myrtle.rogers724@gmail.com",
+    cashApp: "340-513-2343", // Cash App via phone number (no cashtag)
     payPalHandle: "MyrtleRogers296",
   },
 

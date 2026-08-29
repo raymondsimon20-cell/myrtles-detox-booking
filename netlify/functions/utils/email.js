@@ -154,7 +154,7 @@ export function paymentInstructions(deposit, word = "deposit") {
   const pm = config.paymentMethods;
   return `Send your $${deposit} ${word} to one of:
   • Zelle: ${pm.zelle}
-  • Cash App: $${pm.cashTag} (or ${pm.cashApp}) — https://cash.app/$${pm.cashTag}/${deposit}
+  • Cash App: ${pm.cashTag ? `$${pm.cashTag} — https://cash.app/$${pm.cashTag}/${deposit}` : pm.cashApp}
   • PayPal: ${pm.payPalHandle} — https://paypal.me/${pm.payPalHandle}/${deposit}
   • Cash: prepay in person
 
