@@ -199,3 +199,10 @@ a.paylink:hover { background: var(--gold-dark); }
 .slot-row .who { flex: 1; min-width: 150px; }
 #login-box input { padding: 0.55rem; border: 1px solid #ddd2b8; border-radius: 8px; font: inherit; }
 .manual-form input, .manual-form select { padding: 0.45rem; border: 1px solid #ddd2b8; border-radius: 8px; font: inherit; margin: 0.2rem 0.3rem 0.2rem 0; }
+
+/* ---- Shop: farm & home products ---- */
+.product-card { cursor: default; }
+.product-card:hover { transform: none; border-color: var(--gold); }
+.p-qty { margin: 0.35rem 0 0.5rem; padding: 0.3rem 0.45rem; border-radius: 6px; font-size: 0.95rem; }
+.pp-product { margin-top: 0.25rem; min-height: 34px; }
+.p-buy { display: block; margin-top: 0.25rem; }

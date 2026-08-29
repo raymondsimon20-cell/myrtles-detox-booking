@@ -56,6 +56,30 @@ export default {
     { id: "sauna-25", name: "Sauna — 25 min", label: "25 min", price: "$60", deposit: 60, group: "Sauna", times: ["10:30", "11:30", "12:30", "13:30", "14:30", "15:30", "16:30", "17:30"], flexTimes: ["17:30"], img: "sauna" },
     { id: "sauna-30", name: "Sauna — 30 min", label: "30 min", price: "$65", deposit: 65, group: "Sauna", times: ["10:30", "11:30", "12:30", "13:30", "14:30", "15:30", "16:30", "17:30"], flexTimes: ["17:30"], img: "sauna" },
     { id: "body-part-manip", name: "Body Part Manipulation Therapy (Cranial / Spinal / Abdominal)", price: "$75-$150", deposit: 75 },
+    // ---- Farm classes & tours (hourly Mon-Thu grid like other services) ----
+    { id: "detergent-class", name: "Liquid Laundry Detergent Making Class", price: "$40 per person", deposit: 40, img: "detergent",
+      note: "Learn to make your own liquid laundry detergent (castile soap, borax & washing soda)." },
+    { id: "pineapple-class-30", name: "Pineapple Garden Class — 30 min", label: "30 min", price: "$60", deposit: 60, group: "Pineapple Garden Class", img: "pineapple",
+      note: "Covers pineapple varieties, soil for planting, fertilizer, watering, pruning, Jadam fertilizer & blooming fertilizer." },
+    { id: "pineapple-class-60", name: "Pineapple Garden Class — 60 min", label: "60 min", price: "$100", deposit: 75, group: "Pineapple Garden Class", img: "pineapple",
+      note: "Covers pineapple varieties, soil for planting, fertilizer, watering, pruning, Jadam fertilizer & blooming fertilizer." },
+    { id: "dragonfruit-tour-30", name: "Dragon Fruit Tour — 30 min", label: "30 min", price: "$60", deposit: 60, group: "Dragon Fruit Tour", img: "dragonfruit",
+      note: "Covers varieties (self-sterile & self-fertile), self-pollination, soil, pollination & fertilization." },
+    { id: "dragonfruit-tour-60", name: "Dragon Fruit Tour — 60 min", label: "60 min", price: "$100", deposit: 75, group: "Dragon Fruit Tour", img: "dragonfruit",
+      note: "Covers varieties (self-sterile & self-fertile), self-pollination, soil, pollination & fertilization." },
+    { id: "survival-garden-tour", name: "Survival Gardening Tour — 1 hour", price: "$110 per person", deposit: 75, img: "survival",
+      note: "Learn about survival gardening on a 1-hour guided tour of the farm." },
+  ],
+
+  // Products sold on the site. price: a number (USD) enables online checkout;
+  // price: null shows "Call for price" with no buy button (placeholder until set).
+  products: [
+    { id: "detergent-1gal", name: "Laundry Detergent Refill — 1 Gallon", price: 10, img: "detergent",
+      note: "A Better Choice homemade laundry detergent: castile soap, borax & washing soda." },
+    { id: "detergent-5gal", name: "Laundry Detergent Refill — 5 Gallon", price: 35, img: "detergent",
+      note: "A Better Choice homemade laundry detergent: castile soap, borax & washing soda." },
+    { id: "fish-aminos", name: "Fish Aminos for Plants", price: null, img: "fish-aminos",
+      note: "Natural plant fertilizer from Myrtle's Exotic Farm — whole fish, sugar & molasses. Use 1 Tbsp per gallon of water." },
   ],
 
   paymentMethods: {

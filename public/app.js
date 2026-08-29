@@ -130,6 +130,7 @@
         <span class="s-body">
           <span class="s-name">${c.group}</span>
           <select class="s-duration" aria-label="${c.group} duration">${opts}</select><br/>
+          ${c.variants[0].note ? `<span class="hint">${c.variants[0].note}</span><br/>` : ""}
           <span class="s-dep">Deposit: $${c.variants[0].deposit}</span>
         </span>
       </div>`;
@@ -372,6 +373,66 @@
     $("step-done").scrollIntoView({ behavior: "smooth" });
   }
 
+  // ---------- Shop: farm & home products ----------
+  const products = cfg.products || [];
+  if (products.length) {
+    $("product-list").innerHTML = products.map((p) => {
+      const canBuy = typeof p.price === "number";
+      const qty = `<select class="p-qty" aria-label="Quantity" data-id="${p.id}">
+        ${[1, 2, 3, 4, 5].map((n) => `<option value="${n}">Qty: ${n}</option>`).join("")}</select>`;
+      const buy = canBuy
+        ? (cfg.paymentsEnabled && cfg.paypalClientId
+            ? `${qty}<div class="pp-product" id="pp-${p.id}"></div>`
+            : `<span class="hint">Call or text 340.513.2343 to order.</span>`)
+        : `<span class="hint">Call or text 340.513.2343 for pricing &amp; to order.</span>`;
+      return `<div class="service-card product-card" data-id="${p.id}">
+        <img src="img/${p.img || p.id}.jpg" alt="${p.name}" loading="lazy"
+             onerror="this.style.display='none'" />
+        <span class="s-body">
+          <span class="s-name">${p.name}</span>
+          <span class="s-price">${canBuy ? `$${p.price}` : "Price TBD — call for price"}</span><br/>
+          ${p.note ? `<span class="hint">${p.note}</span><br/>` : ""}
+          <span class="p-buy">${buy}</span>
+        </span>
+      </div>`;
+    }).join("");
+  }
+
+  function showShopError(msg) {
+    const el = $("shop-error");
+    el.textContent = msg || "";
+    el.classList.toggle("hidden", !msg);
+  }
+
+  function renderProductButtons() {
+    for (const p of products) {
+      if (typeof p.price !== "number") continue;
+      const el = document.getElementById(`pp-${p.id}`);
+      if (!el) continue;
+      let orderRef = null;
+      window.paypal.Buttons({
+        style: { height: 32 },
+        createOrder: async () => {
+          showShopError(null);
+          const qty = +(document.querySelector(`.p-qty[data-id="${p.id}"]`)?.value || 1);
+          const r = await api("/api/create-product-order", { productId: p.id, quantity: qty });
+          orderRef = r.orderRef;
+          return r.orderId;
+        },
+        onApprove: async (data) => {
+          try {
+            await api("/api/capture-product-order", { orderId: data.orderID, orderRef });
+            const card = el.closest(".product-card");
+            card.querySelector(".p-buy").innerHTML =
+              `<strong>✅ Paid — thank you!</strong><br/><span class="hint">We'll contact you to arrange pickup.</span>`;
+          } catch (e) { showShopError(e.message); }
+        },
+        onError: () =>
+          showShopError("Payment didn't go through — you can try again or call 340.513.2343 to order."),
+      }).render(el);
+    }
+  }
+
   // PayPal / Venmo buttons
   if (cfg.paymentsEnabled && cfg.paypalClientId) {
     $("pay-online").classList.remove("hidden");
@@ -402,6 +463,7 @@
         },
         onError: () => showError("Payment didn't go through. You can try again or reserve and pay by Zelle/Cash App."),
       }).render("#paypal-buttons");
+      renderProductButtons();
     };
     document.head.appendChild(script);
   }

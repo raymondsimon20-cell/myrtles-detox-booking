@@ -11,6 +11,7 @@ export default async () =>
     minHoursAhead: config.minHoursAhead,
     hours: config.hours,
     services: config.services,
+    products: config.products || [],
     flexFee: config.flexFee,
     sundayPrepay: config.sundayPrepay,
     paymentMethods: config.paymentMethods,
