@@ -78,7 +78,7 @@ export default {
       note: "A Better Choice homemade laundry detergent: castile soap, borax & washing soda." },
     { id: "detergent-5gal", name: "Laundry Detergent Refill — 5 Gallon", price: 35, img: "detergent",
       note: "A Better Choice homemade laundry detergent: castile soap, borax & washing soda." },
-    { id: "fish-aminos", name: "Fish Aminos for Plants", price: null, img: "fish-aminos",
+    { id: "fish-aminos", name: "Fish Aminos for Plants", price: 15, img: "fish-aminos",
       note: "Natural plant fertilizer from Myrtle's Exotic Farm — whole fish, sugar & molasses. Use 1 Tbsp per gallon of water." },
   ],
 
